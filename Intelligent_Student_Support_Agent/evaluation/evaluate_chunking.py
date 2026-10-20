@@ -392,7 +392,6 @@ class ChunkingEvaluator:
 
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(report_md)
-
         logger.info(f"Audit report written to: {output_path}")
 
 
