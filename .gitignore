@@ -1,0 +1,84 @@
+# ==============================================================================
+# Git Ignore - Intelligent Student Support Agent & Workspace Root
+# ==============================================================================
+
+# --- Environment & Secret Keys ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# --- Python Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# --- Python Bytecode & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Testing & Type Checking Caches ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# --- Observability, Logs & Traces ---
+*.log
+logs/*
+!logs/.gitkeep
+traces/*
+!traces/.gitkeep
+evaluation/results/*
+!evaluation/results/.gitkeep
+
+# --- Vector & Database Local Data ---
+postgres_data/
+qdrant_data/
+*.sqlite
+*.sqlite3
+*.db
+
+# --- HuggingFace & PyTorch Cache ---
+.cache/
+huggingface/
+checkpoints/
+
+# --- Operating System & Editor Files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*~
