@@ -1,0 +1,57 @@
+# ==============================================================================
+# Justfile - Intelligent Student Support Agent Task Automation
+# ==============================================================================
+
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
+
+# Default recipe: display help
+default:
+    @just --list
+
+# --- Infrastructure (Docker) ---
+# Start Qdrant, Redis, and PostgreSQL containers in background
+up:
+    docker compose up -d
+
+# Stop and remove running containers
+down:
+    docker compose down
+
+# Follow container logs
+logs:
+    docker compose logs -f
+
+# --- Database & Ingestion Setup ---
+# Initialize PostgreSQL tables
+db-init:
+    python scripts/init_db.py
+
+# Seed mock students, fees, and scholarships into PostgreSQL
+seed:
+    python scripts/seed_db.py
+
+# Parse, chunk, embed, and store student handbook in Qdrant & track in PostgreSQL
+ingest:
+    python scripts/ingest_handbook.py
+
+# --- Application Runtimes ---
+# Start FastAPI backend server with hot-reload (port 8000)
+server:
+    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Launch Streamlit development & testing UI
+streamlit:
+    streamlit run scripts/streamlit_app.py
+
+# Run interactive terminal agent CLI
+cli:
+    python app/main.py --cli
+
+# --- Benchmarks & Evaluation ---
+# Run 8 benchmark evaluation scenarios and output metrics table
+eval:
+    python scripts/evaluate.py
+
+# Clean temporary log files, traces, and caches
+clean:
+    powershell -Command "Get-ChildItem -Path logs/*.log, traces/*.json -ErrorAction SilentlyContinue | Remove-Item -Force"
