@@ -88,7 +88,8 @@ class IngestionService:
             chunk_texts = [c["content"] for c in chunks]
             embeddings = self.embedder.embed_documents(chunk_texts)
 
-            # 5. Qdrant vector store upsert stage
+            # 5. Qdrant vector store upsert stage (clear prior points for idempotent ingestion)
+            self.vector_store.delete_by_document(filename)
             upserted_count = self.vector_store.upsert_chunks(chunks, embeddings)
 
             # 6. Mark as successfully inserted in PostgreSQL

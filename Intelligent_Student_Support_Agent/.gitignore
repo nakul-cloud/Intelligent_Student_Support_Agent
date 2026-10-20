@@ -50,14 +50,12 @@ htmlcov/
 .ruff_cache/
 .hypothesis/
 
-# --- Observability, Logs & Traces ---
+# --- Observability & Runtime Logs ---
 *.log
 logs/*
 !logs/.gitkeep
-traces/*
-!traces/.gitkeep
-evaluation/results/*
-!evaluation/results/.gitkeep
+
+# Note: evaluation/results/ and traces/ are intentionally tracked in git as key assignment deliverables.
 
 # --- Vector & Database Local Data ---
 postgres_data/

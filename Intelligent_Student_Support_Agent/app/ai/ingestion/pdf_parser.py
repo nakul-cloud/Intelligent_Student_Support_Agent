@@ -11,13 +11,27 @@ import pymupdf
 from app.utils.logger import logger
 
 # Regex to match numbered sections like "10.2 Eligibility for Writing End-Term Examination" or "1. Introduction"
-SECTION_HEADING_REGEX = re.compile(r"^(\d+(?:\.\d+)*)\s+([A-Za-z].*)$")
+# Prevents false matches on table float ranges (e.g. "0.55 to 1.54") or lowercase fragments ("1 time")
+SECTION_HEADING_REGEX = re.compile(r"^([1-9]\d*(?:\.\d+)*)\s+([A-Z].*)$")
 
 # Regex to match top-level unnumbered chapters / annexures
+# Annexure headings must have colon/title and NOT end in closing parentheses or inline text
 CHAPTER_HEADING_REGEX = re.compile(
-    r"^(Introduction|Vision|Mission|Programme Structure|Evaluation System|Annexure\s+[A-Z0-9]+|Table of Contents)",
+    r"^(?:Annexure\s+[IVXLCDM0-9]+(?:\s+[A-Z])?\s*:\s*[A-Za-z].*|Introduction|Vision|Mission|Programme Structure|Evaluation System|Table of Contents)$",
     re.IGNORECASE,
 )
+
+
+def clean_pdf_text(text: str) -> str:
+    """Normalize typography and whitespace artifacts from PDF extraction."""
+    # Convert smart quotes to standard ASCII
+    text = text.replace("\u201c", '"').replace("\u201d", '"')
+    text = text.replace("\u2018", "'").replace("\u2019", "'")
+    # Convert en-dash and em-dash to standard dashes
+    text = text.replace("\u2013", "-").replace("\u2014", "--")
+    # Clean zero-width spaces and replacement characters
+    text = text.replace("\u200b", "").replace("\ufffd", "")
+    return text
 
 
 class StructureAwarePDFParser:
@@ -58,12 +72,17 @@ class StructureAwarePDFParser:
                     "section_number": current_sec_num,
                     "section_title": current_sec_title,
                     "page_number": current_page,
-                    "text": raw_text,
+                    "text": clean_pdf_text(raw_text),
                 })
             current_text_buffer = []
 
         for page_idx in range(total_pages):
             page_num = page_idx + 1
+
+            # Skip Cover (page 1) and Table of Contents (pages 2-4) to avoid indexing TOC as content
+            if page_num in (1, 2, 3, 4):
+                continue
+
             page = doc[page_idx]
             page_text = page.get_text("text")
 
@@ -73,7 +92,7 @@ class StructureAwarePDFParser:
             lines = page_text.split("\n")
 
             for line in lines:
-                line_stripped = line.strip()
+                line_stripped = clean_pdf_text(line.strip())
                 if not line_stripped:
                     continue
 
@@ -91,7 +110,7 @@ class StructureAwarePDFParser:
                     current_sec_title = m_num.group(2).strip()
                     current_page = page_num
                     current_text_buffer.append(line_stripped)
-                elif m_chap and len(line_stripped) < 70:
+                elif m_chap and len(line_stripped) < 70 and not line_stripped.endswith(")"):
                     flush_section()
                     current_sec_num = "Chapter"
                     current_sec_title = line_stripped

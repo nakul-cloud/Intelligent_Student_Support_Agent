@@ -37,5 +37,8 @@ cli:
 eval:
     just -f Intelligent_Student_Support_Agent/Justfile -d Intelligent_Student_Support_Agent eval
 
+audit-chunks:
+    just -f Intelligent_Student_Support_Agent/Justfile -d Intelligent_Student_Support_Agent audit-chunks
+
 clean:
     just -f Intelligent_Student_Support_Agent/Justfile -d Intelligent_Student_Support_Agent clean

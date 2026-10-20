@@ -94,6 +94,25 @@ class QdrantVectorStore:
         logger.info(f"Successfully upserted {len(points)} points into Qdrant.")
         return len(points)
 
+    def delete_by_document(self, document_name: str) -> None:
+        """Delete all points associated with a specific document name for idempotent ingestion."""
+        try:
+            self.client.delete(
+                collection_name=self.COLLECTION_NAME,
+                points_selector=qmodels.Filter(
+                    must=[
+                        qmodels.FieldCondition(
+                            key="metadata.document_name",
+                            match=qmodels.MatchValue(value=document_name),
+                        )
+                    ]
+                ),
+            )
+            logger.info(f"Cleared existing points for document '{document_name}' from Qdrant.")
+        except Exception as exc:
+            logger.warning(f"Could not delete previous points for document '{document_name}': {exc}")
+
+
     def build_metadata_filter(self, filters: dict[str, Any]) -> qmodels.Filter:
         """Build a Qdrant Filter object from key-value pairs.
         

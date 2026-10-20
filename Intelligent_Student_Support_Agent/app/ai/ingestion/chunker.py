@@ -29,7 +29,7 @@ class SectionAwareChunker:
         self.fallback_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.target_chunk_chars,
             chunk_overlap=self.overlap_chars,
-            separators=["\n\n", "\n", "; ", ". ", " ", ""],
+            separators=["\n\n", ". ", "; ", "\n", " ", ""],
         )
         logger.debug(
             f"Initialized SectionAwareChunker (target_chars={self.target_chunk_chars}, overlap_chars={self.overlap_chars})"
