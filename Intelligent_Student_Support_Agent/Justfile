@@ -24,33 +24,37 @@ logs:
 # --- Database & Ingestion Setup ---
 # Initialize PostgreSQL tables
 db-init:
-    python scripts/init_db.py
+    uv run python scripts/init_db.py
 
 # Seed mock students, fees, and scholarships into PostgreSQL
 seed:
-    python scripts/seed_db.py
+    uv run python scripts/seed_db.py
 
 # Parse, chunk, embed, and store student handbook in Qdrant & track in PostgreSQL
 ingest:
-    python scripts/ingest_handbook.py
+    uv run python scripts/ingest_handbook.py
 
 # --- Application Runtimes ---
 # Start FastAPI backend server with hot-reload (port 8000)
 server:
-    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Launch Streamlit development & testing UI
 streamlit:
-    streamlit run scripts/streamlit_app.py
+    uv run streamlit run scripts/streamlit_app.py
 
 # Run interactive terminal agent CLI
 cli:
-    python app/main.py --cli
+    uv run python app/main.py --cli
 
 # --- Benchmarks & Evaluation ---
 # Run 8 benchmark evaluation scenarios and output metrics table
 eval:
-    python scripts/evaluate.py
+    uv run python scripts/evaluate.py
+
+# Audit chunk fidelity across 5 dimensions (Coverage, Metadata, Boundaries, Integrity, Tables)
+audit-chunks:
+    uv run python evaluation/evaluate_chunking.py
 
 # Clean temporary log files, traces, and caches
 clean:

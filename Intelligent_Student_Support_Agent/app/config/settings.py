@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     similarity_threshold: float = 0.7
     top_k_chunks: int = 3
 
+    # --- Dynamic RAG Chunking Configuration ---
+    chunk_target_tokens: int = 500
+    chunk_overlap_tokens: int = 50
+    chunk_target_chars: int = 1800
+    chunk_overlap_chars: int = 200
+
     # --- Relational Database & Cache ---
     database_url: str = (
         "postgresql+asyncpg://student_agent:student_agent_dev@localhost:5432/student_support_db"
