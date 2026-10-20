@@ -106,21 +106,17 @@ sequenceDiagram
     Mem-->>API: Active history + Student Facts
     API->>Agent: Run agent loop with tools schema
     
-    rect rgb(240, 248, 255)
-    Note over Agent: Turn 1: LLM decides tools needed
+    Note over Agent, Tools: Turn 1: Autonomous Reasoning & Tool Calling
     Agent->>Tracer: Log Step: Decided to call get_fee_status & search_student_handbook
     Agent->>Tools: Call get_fee_status(student_id="STU001")
     Tools-->>Agent: {"status": "OVERDUE", "pending_amount": 75000, "due_date": "2026-10-15"}
     Agent->>Tools: Call search_student_handbook(query="attendance requirement end term exam")
     Tools-->>Agent: "[Handbook Section 10.2 | Page 9] Minimum 70% attendance required..."
-    end
 
-    rect rgb(245, 255, 250)
-    Note over Agent: Turn 2: Synthesize final personalized answer
+    Note over Agent, Mem: Turn 2: Response Synthesis & State Persistence
     Agent->>Tracer: Log Token Usage, Latency & Final Response
     Agent->>Mem: Update sliding conversation window (Redis)
     Agent->>Mem: Extract non-sensitive facts for profile (Postgres)
-    end
 
     Agent-->>API: Streamed structured response with citations
     API-->>Student: Clear, personalized answer citing Section 10.2 & exact fee deadline
