@@ -12,6 +12,7 @@ import string
 from sqlalchemy import select
 from app.config.constants import TicketPriority, TicketStatus
 from app.config.database import AsyncSessionLocal
+from app.config.settings import settings
 from app.models.student_records import Student, SupportTicket
 from app.utils.logger import logger
 
@@ -55,9 +56,9 @@ async def create_support_ticket(
             if clean_priority not in valid_priorities:
                 clean_priority = TicketPriority.MEDIUM.value
 
-            # 3. Generate a unique ticket tracking code: TICK-XXXXX
+            # 3. Generate a unique ticket tracking code using configured prefix
             random_digits = "".join(random.choices(string.digits, k=5))
-            ticket_code = f"TICK-{random_digits}"
+            ticket_code = f"{settings.ticket_prefix}{random_digits}"
 
             # 4. Insert ticket record into PostgreSQL
             ticket = SupportTicket(

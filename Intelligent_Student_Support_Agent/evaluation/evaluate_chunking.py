@@ -36,9 +36,9 @@ class ChunkingEvaluator:
         "due to",
     )
 
-    def __init__(self, pdf_path: Optional[str] = None, collection_name: str = "student_handbook") -> None:
+    def __init__(self, pdf_path: Optional[str] = None, collection_name: Optional[str] = None) -> None:
         self.pdf_path = pdf_path or settings.handbook_path
-        self.collection_name = collection_name
+        self.collection_name = collection_name or settings.qdrant_collection_name
         self.qdrant_client = QdrantClient(url=settings.qdrant_url)
 
     def fetch_all_chunks(self) -> list[dict[str, Any]]:

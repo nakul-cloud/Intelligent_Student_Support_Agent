@@ -1,6 +1,6 @@
 # Student Handbook Chunking & Ingestion Fidelity Audit
 
-> **Audit Timestamp**: 2026-10-20 18:33:02 UTC  
+> **Audit Timestamp**: 2026-10-21 13:28:34 UTC  
 > **Source PDF**: `data/student_handbook.pdf` (44 pages)  
 > **Qdrant Collection**: `student_handbook` (64 chunks)  
 
