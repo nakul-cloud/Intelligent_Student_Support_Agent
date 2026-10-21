@@ -1,0 +1,9 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/Intelligent_Student_Support_Agent/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/Intelligent_Student_Support_Agent"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/Intelligent_Student_Support_Agent"
+  ]
+}
