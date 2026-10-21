@@ -46,3 +46,25 @@ class VectorStoreError(AppError):
 
     def __init__(self, message: str = "Vector store operation failed", errors: Optional[Any] = None) -> None:
         super().__init__(message=message, status_code=503, errors=errors)
+
+
+class AuthenticationError(AppError):
+    """Exception raised when authentication fails (invalid token, bad credentials)."""
+
+    def __init__(self, message: str = "Authentication failed", errors: Optional[Any] = None) -> None:
+        super().__init__(message=message, status_code=401, errors=errors)
+
+
+class PermissionDeniedError(AppError):
+    """Exception raised when access to unauthorized resources is attempted."""
+
+    def __init__(self, message: str = "Access denied: unauthorized action", errors: Optional[Any] = None) -> None:
+        super().__init__(message=message, status_code=403, errors=errors)
+
+
+class ConflictError(AppError):
+    """Exception raised when attempting to create duplicate resources (e.g. existing credentials)."""
+
+    def __init__(self, message: str = "Resource conflict: entity already exists", errors: Optional[Any] = None) -> None:
+        super().__init__(message=message, status_code=409, errors=errors)
+

@@ -9,6 +9,8 @@ from app.models.document import Document
 from app.models.message import Message
 from app.models.student_memory import StudentMemory
 from app.models.student_records import FeeRecord, Scholarship, Student, SupportTicket
+from app.models.auth_credentials import AuthCredentials
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "Base",
@@ -23,4 +25,6 @@ __all__ = [
     "FeeRecord",
     "Scholarship",
     "SupportTicket",
+    "AuthCredentials",
+    "AuditLog",
 ]

@@ -59,6 +59,39 @@ class Settings(BaseSettings):
     langsmith_api_key: str = ""
     langsmith_project: str = "student-support-agent"
 
+    # --- Authentication (JWT & Password Hashing) ---
+    jwt_secret: str = "super-secret-jwt-key-256-bit-student-agent"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_hours: int = 24
+
+    # --- Two-Tier Memory Configuration ---
+    redis_memory_key_prefix: str = "student_memory:"
+    redis_memory_ttl_seconds: int = 86400
+
+    # --- Privacy & Safety Settings ---
+    sensitive_keywords_str: str = (
+        "password,otp,pin,cvv,credit_card,card_number,secret,ssn,token,bank,upi"
+    )
+
+    # --- Sensitive Actions requiring Approval Gate ---
+    sensitive_actions_str: str = (
+        "update_contact,request_fee_waiver,update_address,scholarship_appeal"
+    )
+
+    @property
+    def sensitive_keywords(self) -> frozenset[str]:
+        """Parsed set of sensitive keywords to scrub from long-term memory."""
+        return frozenset(
+            k.strip().lower() for k in self.sensitive_keywords_str.split(",") if k.strip()
+        )
+
+    @property
+    def sensitive_actions(self) -> frozenset[str]:
+        """Parsed set of sensitive actions requiring approval confirmation."""
+        return frozenset(
+            a.strip() for a in self.sensitive_actions_str.split(",") if a.strip()
+        )
+
     # --- Application Runtime & Logging ---
     app_env: str = "development"
     host: str = "0.0.0.0"

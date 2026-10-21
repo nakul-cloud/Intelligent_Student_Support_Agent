@@ -75,6 +75,16 @@ async def create_support_ticket(
 
             logger.info(f"TicketTool: Successfully created ticket '{ticket_code}' for student '{clean_id}'.")
 
+            # 5. Record audit trail for ticket generation
+            from app.services.audit_service import log_audit_event
+            await log_audit_event(
+                student_id=clean_id,
+                action="ticket_tool",
+                target_id=clean_id,
+                decision="ALLOWED",
+                result=f"Support ticket {ticket_code} created (Priority: {clean_priority})",
+            )
+
             confirmation = (
                 f"Support Ticket Created Successfully!\n"
                 f"Ticket ID: {ticket_code}\n"

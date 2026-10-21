@@ -6,9 +6,11 @@ The runtime agent and tools query these PostgreSQL tables directly.
 """
 
 import asyncio
+import bcrypt
 from sqlalchemy import select, delete
 from app.config.database import AsyncSessionLocal, engine
 from app.models.student_records import Student, FeeRecord, Scholarship
+from app.models.auth_credentials import AuthCredentials
 from app.utils.logger import logger
 
 # Initial mock data to be seeded directly into PostgreSQL
@@ -200,6 +202,22 @@ async def seed_database() -> None:
                     if schol_record:
                         await session.delete(schol_record)
                         logger.info(f"  [-] Removed scholarship for {student_id}")
+
+                # 4. Upsert Default Auth Credentials for testing (Default password: Student@123)
+                auth_res = await session.execute(
+                    select(AuthCredentials).where(AuthCredentials.student_id == student_id)
+                )
+                auth_record = auth_res.scalar_one_or_none()
+
+                if not auth_record:
+                    default_pw = "Student@123"
+                    hashed_pw = bcrypt.hashpw(default_pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+                    auth_record = AuthCredentials(
+                        student_id=student_id,
+                        hashed_password=hashed_pw,
+                    )
+                    session.add(auth_record)
+                    logger.info(f"  [+] Created default auth credentials for {student_id}")
 
             await session.commit()
             logger.info("Database seeding successfully committed to PostgreSQL!")
