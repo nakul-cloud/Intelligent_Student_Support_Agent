@@ -1,4 +1,4 @@
-"""Authentication and request security dependencies matching knitly backend pattern."""
+"""Authentication and request security dependencies."""
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

@@ -1,6 +1,5 @@
 """Qdrant vector store interface with metadata filtering, indexing, and semantic retrieval.
 
-Directly aligns with the enterprise patterns in knitly-ai-langraph/app/ai/retrieval/vector_store.py.
 Supports cosine similarity search with exact metadata filters (section_number, page_number, document_name).
 """
 

@@ -1,6 +1,6 @@
 """Single source of truth for all domain enums, status codes, and constants.
 
-Matching the enterprise pattern from knitly-ai-langraph/app/config/constants.py.
+Follows enterprise clean architecture standards.
 Prevents magic strings across routes, agents, tools, and services.
 """
 

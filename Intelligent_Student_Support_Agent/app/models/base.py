@@ -1,6 +1,6 @@
 """Master SQLAlchemy declarative base and reusable mixins.
 
-Directly mirrors knitly-ai-langraph/app/models/base.py.
+Follows enterprise clean architecture standards.
 Provides enterprise UUID primary keys and timezone-aware timestamps across all tables.
 """
 
