@@ -1,0 +1,47 @@
+{
+  "trace_id": "d33266c6",
+  "agent": "student_support_agent",
+  "timestamp": "2026-10-21T15:20:48.354827+00:00",
+  "user_input": "What is the fee status for STU001?",
+  "total_latency_ms": 212.06,
+  "total_input_tokens": 280,
+  "total_output_tokens": 60,
+  "total_tokens": 340,
+  "trace": [
+    {
+      "turn": 1,
+      "type": "model_call",
+      "latency_ms": 0.16,
+      "input_tokens": 100,
+      "output_tokens": 25,
+      "total_tokens": 125,
+      "requested_tools": [
+        "get_fee_status"
+      ]
+    },
+    {
+      "turn": 1,
+      "type": "tool_call",
+      "tool": "get_fee_status",
+      "arguments": {
+        "student_id": "STU001"
+      },
+      "observation": "Student Name: Rahul Sharma (ID: STU001)\nProgramme: PGDM AI and DS | Batch: 2025-27\nEnrollment Status: Enrolled\nTotal Tuition Fee: INR 450,000.00\nAmount Paid: INR 225,000.00\nPending Dues: INR 225,000.00\nDue Date: 2026-10-31\nPayment Status: Partially Paid\nLast Payment Receipt: Receipt #RCP-2026-0301",
+      "latency_ms": 116.2
+    },
+    {
+      "turn": 2,
+      "type": "model_call",
+      "latency_ms": 0.15,
+      "input_tokens": 180,
+      "output_tokens": 35,
+      "total_tokens": 215,
+      "requested_tools": []
+    },
+    {
+      "turn": 2,
+      "type": "termination",
+      "reason": "final_answer"
+    }
+  ]
+}

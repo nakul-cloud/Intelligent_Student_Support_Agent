@@ -41,6 +41,15 @@ class ChatResponse(BaseModel):
         default=False,
         description="True if agent paused awaiting human confirmation on a sensitive action",
     )
+    trace: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Execution trace metrics and steps",
+    )
+
+    @property
+    def reply(self) -> str:
+        """Alias for message for intuitive conversational consumers."""
+        return self.message
 
 
 class MessageItem(BaseModel):

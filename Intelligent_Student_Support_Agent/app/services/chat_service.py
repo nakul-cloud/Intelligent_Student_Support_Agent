@@ -202,6 +202,13 @@ class ChatService:
         )
         trace_id = tracer.trace_id
 
+        # 9. Finalize Tracer metrics and capture execution trace
+        trace_data = tracer.finish()
+        trace_data["duration_ms"] = trace_data.get("total_latency_ms", 0.0)
+        trace_data["steps"] = trace_data.get("trace", [])
+        turn_steps = [s for s in trace_data["steps"] if s.get("type") in ("llm_turn", "tool_call")]
+        trace_data["turn_count"] = max(1, len(turn_steps))
+
         # 10. Persist Assistant Response
         assistant_turn = Message(
             conversation_id=conversation.id,
@@ -226,4 +233,26 @@ class ChatService:
             trace_id=trace_id,
             facts_learned=facts_learned_keys,
             pending_approval=False,
+            trace=trace_data,
+        )
+
+    async def chat(
+        self,
+        student_id: str,
+        message: str,
+        conversation_id: Optional[Any] = None,
+        debug: bool = False,
+    ) -> ChatResponse:
+        """Alias for process_turn providing intuitive parameter naming."""
+        conv_uuid = None
+        if conversation_id:
+            if isinstance(conversation_id, str):
+                conv_uuid = UUID(conversation_id)
+            elif isinstance(conversation_id, UUID):
+                conv_uuid = conversation_id
+
+        return await self.process_turn(
+            student_id=student_id,
+            user_message=message,
+            conversation_id=conv_uuid,
         )
