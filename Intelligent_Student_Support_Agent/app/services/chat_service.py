@@ -19,6 +19,7 @@ from app.exceptions.custom_exceptions import PermissionDeniedError, ResourceNotF
 from app.memory.memory_manager import MemoryManager
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.student_records import Student
 from app.prompts.system_prompt import build_system_prompt
 from app.schemas.chat_schema import ChatResponse, ConversationSummary, MessageItem
 from app.schemas.tool_schemas import TOOL_SCHEMAS
@@ -43,11 +44,15 @@ class ChatService:
         """Binds authenticated caller student_id to tools requiring ownership checks."""
 
         async def contextual_fee_status(**kwargs):
+            if "student_id" not in kwargs or not kwargs["student_id"]:
+                kwargs["student_id"] = student_id
             if "requesting_student_id" not in kwargs:
                 kwargs["requesting_student_id"] = student_id
             return await get_fee_status(**kwargs)
 
         async def contextual_scholarship(**kwargs):
+            if "student_id" not in kwargs or not kwargs["student_id"]:
+                kwargs["student_id"] = student_id
             if "requesting_student_id" not in kwargs:
                 kwargs["requesting_student_id"] = student_id
             return await check_scholarship(**kwargs)
@@ -166,39 +171,49 @@ class ChatService:
         self.session.add(user_turn)
         await self.session.commit()
 
-        # 3. Load Prior Conversation History (last 6 turns for context)
+        # 3. Load Prior Conversation History (excluding current user turn)
         history_stmt = (
             select(Message)
-            .where(Message.conversation_id == conversation.id)
+            .where(Message.conversation_id == conversation.id, Message.id != user_turn.id)
             .order_by(Message.created_at.desc())
-            .limit(6)
+            .limit(10)
         )
         history_res = await self.session.execute(history_stmt)
         history_turns = list(reversed(history_res.scalars().all()))
+        conversation_history = [
+            {"role": turn.role, "content": turn.content}
+            for turn in history_turns
+        ]
 
-        # 4. Load Two-Tier Student Memory (Redis -> PostgreSQL)
+        # 4. Fetch Student Profile for prompt identity injection
+        res_stu = await self.session.execute(select(Student).where(Student.student_id == student_id))
+        student_rec = res_stu.scalar_one_or_none()
+
+        # 5. Load Two-Tier Student Memory (Redis -> PostgreSQL)
         memory_context = await self.memory_manager.load_memory(student_id)
 
-        # 5. Build System Prompt with injected Memory Context
-        system_prompt = build_system_prompt(memory_context=memory_context)
-
-        # 6. Format LLM Messages
-        llm_messages = [{"role": "system", "content": system_prompt}]
-        for turn in history_turns:
-            llm_messages.append({"role": turn.role, "content": turn.content})
+        # 6. Build System Prompt with Authenticated Identity & Memory Context
+        system_prompt = build_system_prompt(
+            memory_context=memory_context,
+            student_id=student_id,
+            student_name=student_rec.name if student_rec else None,
+            programme=student_rec.programme if student_rec else None,
+            batch=student_rec.batch if student_rec else None,
+        )
 
         # 7. Initialize Tracer and Contextual Tool Map
         tracer = Tracer(agent_name="StudentSupportAgent")
         contextual_tools = self._build_contextual_tool_map(student_id)
         client = get_async_groq_client()
 
-        # 8. Run Multi-Turn Agent Loop
+        # 8. Run Multi-Turn Agent Loop with Conversation History
         assistant_reply = await run_agent(
             user_query=user_message,
             system_prompt=system_prompt,
             tool_schemas=TOOL_SCHEMAS,
             tool_map=contextual_tools,
             tracer=tracer,
+            conversation_history=conversation_history,
         )
         trace_id = tracer.trace_id
 

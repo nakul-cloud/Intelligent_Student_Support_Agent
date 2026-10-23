@@ -29,6 +29,7 @@ async def run_agent(
     tool_map: dict[str, Callable[..., Coroutine[Any, Any, str]]],
     tracer: Tracer,
     max_turns: int | None = None,
+    conversation_history: list[dict[str, Any]] | None = None,
 ) -> str:
     """Execute the multi-turn agent loop until a final answer or limit is reached.
 
@@ -41,6 +42,7 @@ async def run_agent(
         tracer: Local Tracer instance to record turn latencies, token consumption,
                 tool calls, and termination reasons.
         max_turns: Maximum allowable reasoning-action iterations (defaults to settings.agent_max_turns).
+        conversation_history: Optional list of previous turn messages [{"role": "user"|"assistant", "content": "..."}]
 
     Returns:
         str: The final natural language response synthesized for the student.
@@ -48,11 +50,22 @@ async def run_agent(
     effective_max_turns = max_turns if max_turns is not None else settings.agent_max_turns
     logger.info(f"AgentLoop: Initiating execution loop for query: '{user_query[:60]}...'")
 
-    # 1. Build initial conversation message sequence
+    # 1. Build initial conversation message sequence with system prompt
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_query},
     ]
+
+    # Inject previous conversation history turns (if any)
+    if conversation_history:
+        for turn_item in conversation_history:
+            role = turn_item.get("role")
+            content = turn_item.get("content")
+            if role in ("user", "assistant") and content:
+                messages.append({"role": role, "content": content})
+
+    # Ensure current user_query is the latest user turn
+    if not messages or messages[-1].get("role") != "user" or messages[-1].get("content") != user_query:
+        messages.append({"role": "user", "content": user_query})
 
     turn = 0
 

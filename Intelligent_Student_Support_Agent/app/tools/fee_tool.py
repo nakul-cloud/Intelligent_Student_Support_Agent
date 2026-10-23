@@ -18,7 +18,7 @@ from app.utils.ownership import check_ownership
 
 
 async def get_fee_status(
-    student_id: str,
+    student_id: Optional[str] = None,
     requesting_student_id: Optional[str] = None,
 ) -> str:
     """Retrieve the current fee payment record and dues for a student.
@@ -34,7 +34,10 @@ async def get_fee_status(
         A human-readable formatted string containing the student's fee details,
         or an informative message if the record is missing or access is unauthorized.
     """
-    clean_id = student_id.strip().upper()
+    target_id = student_id or requesting_student_id
+    if not target_id:
+        return "Error: No student ID provided to look up fee records."
+    clean_id = target_id.strip().upper()
     caller_id = (requesting_student_id or clean_id).strip().upper()
     logger.info(f"FeeTool: Caller '{caller_id}' querying fee status for target '{clean_id}'...")
 

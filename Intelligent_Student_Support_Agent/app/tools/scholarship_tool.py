@@ -18,7 +18,7 @@ from app.utils.ownership import check_ownership
 
 
 async def check_scholarship(
-    student_id: str,
+    student_id: Optional[str] = None,
     requesting_student_id: Optional[str] = None,
 ) -> str:
     """Check active scholarship grants and financial aid awards for a student.
@@ -34,7 +34,10 @@ async def check_scholarship(
         A human-readable formatted string with scholarship grant details,
         or an informative notice if no scholarship exists or access is denied.
     """
-    clean_id = student_id.strip().upper()
+    target_id = student_id or requesting_student_id
+    if not target_id:
+        return "Error: No student ID provided to check scholarship records."
+    clean_id = target_id.strip().upper()
     caller_id = (requesting_student_id or clean_id).strip().upper()
     logger.info(f"ScholarshipTool: Caller '{caller_id}' querying scholarship for '{clean_id}'...")
 

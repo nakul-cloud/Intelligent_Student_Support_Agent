@@ -22,10 +22,11 @@ CORE OPERATIONAL RULES:
    - Never fabricate, guess, or assume financial figures, fee balances, due dates, scholarship criteria, or university deadlines.
    - If a student asks about fees, scholarships, or tickets, call the respective tool to fetch the authoritative data.
 
-2. STUDENT IDENTIFICATION:
-   - Student records require a valid Student ID (e.g., 'STU001', 'STU002').
-   - If a student asks a personalized question and their Student ID is not provided in the query or in the MEMORY CONTEXT below, politely ask them to provide their Student ID before proceeding.
-   - When a Student ID is available in the MEMORY CONTEXT, use it automatically without asking the student again.
+2. STUDENT IDENTIFICATION & AUTHENTICATED CALLER:
+   - When an authenticated student is signed in (see CURRENT AUTHENTICATED STUDENT CONTEXT below), you ALREADY know their identity and Student ID.
+   - For all personalized inquiries (such as "what is my fee status?", "check my scholarship", "open a ticket"), immediately invoke the appropriate tool using the authenticated Student ID.
+   - NEVER ask the student to provide or confirm their Student ID if they are already identified in CURRENT AUTHENTICATED STUDENT CONTEXT.
+   - Only ask for a Student ID if there is no authenticated student context and the user did not specify one.
 
 3. POLICY & HANDBOOK RETRIEVAL:
    - For all questions regarding university regulations, attendance criteria, refund policies, grading scales, hostel rules, leave policies, or disciplinary guidelines, you MUST invoke the `search_student_handbook` tool.
@@ -46,6 +47,9 @@ CORE OPERATIONAL RULES:
    - Do not speculate or make promises regarding policy exceptions or fee waivers.
 
 ---
+CURRENT AUTHENTICATED STUDENT CONTEXT:
+{student_context}
+---
 STUDENT MEMORY CONTEXT (Durable Facts & Preferences from Previous Sessions):
 {memory_context}
 ---
@@ -53,13 +57,22 @@ STUDENT MEMORY CONTEXT (Durable Facts & Preferences from Previous Sessions):
 Always maintain a professional, empathetic, and encouraging tone suitable for a higher education institution."""
 
 
-def build_system_prompt(memory_context: Optional[str] = None) -> str:
-    """Format and return the master system prompt with injected memory context.
+def build_system_prompt(
+    memory_context: Optional[str] = None,
+    student_id: Optional[str] = None,
+    student_name: Optional[str] = None,
+    programme: Optional[str] = None,
+    batch: Optional[str] = None,
+) -> str:
+    """Format and return the master system prompt with injected memory context and student identity.
 
     Args:
         memory_context: Context string containing student facts, programme details,
                         or prior preferences retrieved from dual-tier memory.
-                        If empty or None, a clean default statement is injected.
+        student_id: Authenticated caller student ID (e.g. 'STU001').
+        student_name: Authenticated student full name.
+        programme: Academic program name.
+        batch: Student academic batch.
 
     Returns:
         str: The complete system prompt ready to be sent to the LLM.
@@ -68,4 +81,24 @@ def build_system_prompt(memory_context: Optional[str] = None) -> str:
     if not clean_context:
         clean_context = "No prior student memory recorded for this session."
 
-    return SYSTEM_PROMPT_TEMPLATE.format(memory_context=clean_context)
+    if student_id:
+        details = [f"Student ID: {student_id}"]
+        if student_name:
+            details.append(f"Name: {student_name}")
+        if programme:
+            details.append(f"Programme: {programme}")
+        if batch:
+            details.append(f"Batch: {batch}")
+        student_context = (
+            f"Active Authenticated Student: {', '.join(details)}.\n"
+            f"This student is securely signed in. You ALREADY have their Student ID ('{student_id}').\n"
+            f"Use '{student_id}' directly when invoking student tools (fees, scholarships, tickets) without asking them to re-enter it."
+        )
+    else:
+        student_context = "Guest session: No authenticated student currently logged in."
+
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        student_context=student_context,
+        memory_context=clean_context,
+    )
+
