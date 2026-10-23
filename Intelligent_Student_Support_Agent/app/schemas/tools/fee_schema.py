@@ -1,6 +1,6 @@
 """Function schema for the student tuition fee and dues tool.
 
-Defines the JSON schema used by the Groq Llama 3.3 LLM to decide when and how
+Defines the JSON schema used by the Groq LLM to decide when and how
 to invoke the get_fee_status tool.
 """
 

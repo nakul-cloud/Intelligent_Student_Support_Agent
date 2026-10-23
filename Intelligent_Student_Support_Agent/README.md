@@ -207,8 +207,8 @@ just eval    # Executes full benchmark evaluation
 | `EMBEDDING_DIMENSIONS` | `1536` | Embedding vector size (matches Qdrant collection) |
 | `CHUNK_TARGET_CHARS` | `1800` | Dynamic target chunk size in characters (~450 tokens) |
 | `CHUNK_OVERLAP_CHARS` | `200` | Boundary overlap between adjacent chunks |
-| `GROQ_API_KEY` | *(Secret)* | Groq API Key for Llama 3.3 70B inference |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Primary LLM model used for the agent loop |
+| `GROQ_API_KEY` | *(Secret)* | Groq API Key for openai/gpt-oss-120b inference |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Primary LLM model used for the agent loop |
 
 ---
 

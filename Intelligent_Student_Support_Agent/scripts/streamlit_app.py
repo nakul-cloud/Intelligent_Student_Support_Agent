@@ -616,9 +616,9 @@ with tab_security:
     # Real-time Audit Trail Table
     logs = run_async(fetch_audit_logs(limit=30))
     total_events = len(logs)
-    allowed_count = sum(1 for l in logs if l.status == "ALLOWED")
-    blocked_count = sum(1 for l in logs if l.status == "BLOCKED")
-    approved_count = sum(1 for l in logs if l.status == "APPROVED")
+    allowed_count = sum(1 for l in logs if getattr(l, "decision", None) == "ALLOWED")
+    blocked_count = sum(1 for l in logs if getattr(l, "decision", None) == "BLOCKED")
+    approved_count = sum(1 for l in logs if getattr(l, "decision", None) == "APPROVED")
 
     c_m1, c_m2, c_m3, c_m4 = st.columns(4)
     c_m1.metric("Recent Audit Events", total_events)
@@ -631,10 +631,10 @@ with tab_security:
         audit_table.append({
             "Timestamp": l.created_at.strftime("%H:%M:%S") if l.created_at else "",
             "Caller Student": l.student_id,
-            "Target Student": l.target_student_id,
+            "Target Student": getattr(l, "target_id", None) or "N/A",
             "Action / Tool": l.action,
-            "Status": l.status,
-            "Details": l.details,
+            "Decision": getattr(l, "decision", "N/A"),
+            "Result": getattr(l, "result", None) or "N/A",
         })
 
     if audit_table:

@@ -1,6 +1,6 @@
 """Function schema for the student scholarship awards and grants tool.
 
-Defines the JSON schema used by the Groq Llama 3.3 LLM to decide when and how
+Defines the JSON schema used by the Groq LLM to decide when and how
 to invoke the check_scholarship tool.
 """
 
