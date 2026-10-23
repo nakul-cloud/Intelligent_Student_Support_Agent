@@ -20,11 +20,8 @@ from app.config.database import AsyncSessionLocal, engine
 from app.config.redis import ping_redis, redis_client
 from app.config.settings import settings
 from app.models.audit_log import AuditLog
-from app.models.fee_record import FeeRecord
-from app.models.scholarship import Scholarship
-from app.models.student import Student
+from app.models.student_records import FeeRecord, Scholarship, Student, SupportTicket
 from app.models.student_memory import StudentMemory
-from app.models.support_ticket import SupportTicket
 from app.services.chat_service import ChatService
 from app.memory.memory_manager import MemoryManager
 
@@ -235,11 +232,11 @@ with st.sidebar:
 
     st.subheader("👤 Active Student Context")
     preset_students = {
-        "STU001": "STU001 — Aarav Sharma (PGDM AI & DS)",
-        "STU002": "STU002 — Priya Patel (PGDM General)",
-        "STU003": "STU003 — Rohan Verma (PGDM Marketing)",
-        "STU004": "STU004 — Sneha Nair (PGDM AI & DS)",
-        "STU005": "STU005 — Vikram Singh (PGDM Finance)",
+        "STU001": "STU001 — Rahul Sharma (PGDM AI and DS)",
+        "STU002": "STU002 — Priya Patel (MBA Marketing)",
+        "STU003": "STU003 — Amit Verma (B.Tech CSE)",
+        "STU004": "STU004 — Sneha Gupta (M.Tech Data Science)",
+        "STU005": "STU005 — Vikram Singh (BBA)",
     }
 
     selected_preset = st.selectbox(
@@ -559,11 +556,9 @@ with tab_records:
             <div class="glass-card">
                 <h3 style="margin: 0; color: #38bdf8;">{student.name} ({student.student_id})</h3>
                 <p style="margin: 4px 0; color: #94a3b8;">
-                    <strong>Email:</strong> {student.email} | 
-                    <strong>Program:</strong> {student.program} | 
+                    <strong>Programme:</strong> {student.programme} | 
                     <strong>Batch:</strong> {student.batch} | 
-                    <strong>Status:</strong> {student.status} | 
-                    <strong>CGPA:</strong> {student.cgpa}
+                    <strong>Status:</strong> {student.status}
                 </p>
             </div>
             """,
@@ -577,14 +572,12 @@ with tab_records:
                 fee_rows = []
                 for f in records["fees"]:
                     fee_rows.append({
-                        "Term": f.academic_term,
-                        "Tuition": f.tuition_fee,
-                        "Hostel": f.hostel_fee,
-                        "Library": f.library_fee,
-                        "Total Due": f.total_due,
-                        "Paid": f.paid_amount,
+                        "Total Fee (INR)": f.total_fee,
+                        "Paid (INR)": f.paid,
+                        "Pending (INR)": f.pending,
+                        "Due Date": f.due_date,
                         "Status": f.status,
-                        "Due Date": f.due_date.strftime("%Y-%m-%d") if f.due_date else "",
+                        "Receipt": f.receipt or "N/A",
                     })
                 st.dataframe(fee_rows, use_container_width=True)
             else:
@@ -596,11 +589,10 @@ with tab_records:
                 sch_rows = []
                 for s in records["scholarships"]:
                     sch_rows.append({
-                        "Scholarship": s.name,
-                        "Category": s.category,
-                        "Amount": s.amount,
+                        "Scholarship Scheme": s.scholarship_type,
+                        "Coverage": f"{s.percentage}%",
+                        "Semester Grant (INR)": s.amount_per_semester,
                         "Status": s.status,
-                        "Granted": s.grant_date.strftime("%Y-%m-%d") if s.grant_date else "",
                     })
                 st.dataframe(sch_rows, use_container_width=True)
             else:
@@ -614,7 +606,7 @@ with tab_records:
                 tkt_rows.append({
                     "Ticket ID": t.ticket_id,
                     "Category": t.category,
-                    "Subject": t.subject,
+                    "Description": t.description,
                     "Priority": t.priority,
                     "Status": t.status,
                     "Created": t.created_at.strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "",
