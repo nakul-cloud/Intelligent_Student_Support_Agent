@@ -23,6 +23,8 @@ from app.models.audit_log import AuditLog
 from app.models.student_records import FeeRecord, Scholarship, Student, SupportTicket
 from app.models.student_memory import StudentMemory
 from app.services.chat_service import ChatService
+from app.services.auth_service import AuthService
+from app.schemas.auth_schema import LoginRequest, SignupRequest
 from app.memory.memory_manager import MemoryManager
 
 
@@ -209,6 +211,8 @@ if "conversation_id" not in st.session_state:
     st.session_state["conversation_id"] = None
 if "pending_approval" not in st.session_state:
     st.session_state["pending_approval"] = None
+if "jwt_token" not in st.session_state:
+    st.session_state["jwt_token"] = None
 
 
 # ==============================================================================
@@ -230,34 +234,132 @@ with st.sidebar:
 
     st.divider()
 
-    st.subheader("👤 Active Student Context")
-    preset_students = {
-        "STU001": "STU001 — Rahul Sharma (PGDM AI and DS)",
-        "STU002": "STU002 — Priya Patel (MBA Marketing)",
-        "STU003": "STU003 — Amit Verma (B.Tech CSE)",
-        "STU004": "STU004 — Sneha Gupta (M.Tech Data Science)",
-        "STU005": "STU005 — Vikram Singh (BBA)",
-    }
+    st.subheader("👤 Student Identity & Auth")
 
-    selected_preset = st.selectbox(
-        "Select Seeded Student:",
-        options=list(preset_students.keys()),
-        format_func=lambda x: preset_students[x],
-        index=0,
-    )
+    auth_tab_login, auth_tab_signup, auth_tab_demo = st.tabs([
+        "🔑 Login",
+        "📝 Sign Up",
+        "⚡ Quick Switch",
+    ])
 
-    if selected_preset != st.session_state["student_id"]:
-        st.session_state["student_id"] = selected_preset
-        st.session_state["messages"] = []
-        st.session_state["conversation_id"] = None
-        st.rerun()
+    with auth_tab_login:
+        login_sid = st.text_input("Student ID:", value=st.session_state["student_id"], key="login_sid_input").strip().upper()
+        login_pw = st.text_input("Password:", value="Student@123", type="password", key="login_pw_input")
+        if st.button("Sign In", use_container_width=True, key="login_btn"):
+            async def _do_login(sid: str, pw: str):
+                async with AsyncSessionLocal() as session:
+                    srv = AuthService(session)
+                    return await srv.login(LoginRequest(student_id=sid, password=pw))
 
-    custom_id = st.text_input("Or enter custom ID:", value=st.session_state["student_id"])
-    if custom_id and custom_id != st.session_state["student_id"]:
-        st.session_state["student_id"] = custom_id.strip().upper()
-        st.session_state["messages"] = []
-        st.session_state["conversation_id"] = None
-        st.rerun()
+            try:
+                tok_resp = run_async(_do_login(login_sid, login_pw))
+                st.session_state["jwt_token"] = tok_resp.access_token
+                st.session_state["student_id"] = login_sid
+                st.session_state["messages"] = []
+                st.session_state["conversation_id"] = None
+                st.success(f"Authenticated as {login_sid}!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Login failed: {e}")
+
+    with auth_tab_signup:
+        st.caption("Enroll a new student or register password:")
+        new_sid = st.text_input("New Student ID:", value="", placeholder="e.g. STU007", key="new_sid_input").strip().upper()
+        new_name = st.text_input("Full Name:", value="", placeholder="e.g. Ananya Sen", key="new_name_input")
+        new_prog = st.selectbox(
+            "Programme:",
+            ["PGDM AI and DS", "MBA Marketing", "B.Tech CSE", "M.Tech Data Science", "BBA", "PGDM General"],
+            key="new_prog_input"
+        )
+        new_batch = st.text_input("Batch:", value="2025-27", key="new_batch_input")
+        new_pw = st.text_input("Set Password (min 8 chars):", type="password", placeholder="Secret@123", key="new_pw_input")
+
+        if st.button("Create Account & Enroll", use_container_width=True, key="signup_btn"):
+            if not new_sid or not new_pw or len(new_pw) < 8:
+                st.warning("Please provide a valid Student ID and password (min 8 characters).")
+            else:
+                async def _do_signup(sid: str, name: str, prog: str, batch: str, pw: str):
+                    async with AsyncSessionLocal() as session:
+                        # 1. Enroll in students directory if not already present
+                        res_stu = await session.execute(select(Student).where(Student.student_id == sid))
+                        stu = res_stu.scalar_one_or_none()
+                        if not stu:
+                            stu = Student(
+                                student_id=sid,
+                                name=name or f"Student {sid}",
+                                programme=prog,
+                                batch=batch,
+                                status="Enrolled",
+                            )
+                            session.add(stu)
+                            await session.flush()
+
+                        # 2. Register credentials
+                        srv = AuthService(session)
+                        await srv.signup(SignupRequest(student_id=sid, password=pw))
+                        # 3. Log them in immediately and issue JWT
+                        return await srv.login(LoginRequest(student_id=sid, password=pw))
+
+                try:
+                    tok_resp = run_async(_do_signup(new_sid, new_name, new_prog, new_batch, new_pw))
+                    st.session_state["jwt_token"] = tok_resp.access_token
+                    st.session_state["student_id"] = new_sid
+                    st.session_state["messages"] = []
+                    st.session_state["conversation_id"] = None
+                    st.success(f"Enrolled & authenticated as {new_sid}!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Sign up error: {e}")
+
+    with auth_tab_demo:
+        preset_students = {
+            "STU001": "STU001 — Rahul Sharma (PGDM AI and DS)",
+            "STU002": "STU002 — Priya Patel (MBA Marketing)",
+            "STU003": "STU003 — Amit Verma (B.Tech CSE)",
+            "STU004": "STU004 — Sneha Gupta (M.Tech Data Science)",
+            "STU005": "STU005 — Vikram Singh (BBA)",
+        }
+        idx = list(preset_students.keys()).index(st.session_state["student_id"]) if st.session_state["student_id"] in preset_students else 0
+        selected_preset = st.selectbox(
+            "Quick Demo Persona:",
+            options=list(preset_students.keys()),
+            format_func=lambda x: preset_students[x],
+            index=idx,
+            key="preset_select_box"
+        )
+        if selected_preset != st.session_state["student_id"]:
+            st.session_state["student_id"] = selected_preset
+            st.session_state["jwt_token"] = None
+            st.session_state["messages"] = []
+            st.session_state["conversation_id"] = None
+            st.rerun()
+
+    # Active Auth Status Card
+    if st.session_state.get("jwt_token"):
+        st.markdown(
+            f"""
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 10px; margin-top: 10px;">
+                <span style="color: #10b981; font-weight: 600;">🔒 JWT Active Session</span><br>
+                <span style="font-size: 0.8rem; color: #94a3b8;">Signed in as <strong>{st.session_state['student_id']}</strong></span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("🚪 Sign Out", use_container_width=True, key="logout_btn"):
+            st.session_state["jwt_token"] = None
+            st.session_state["messages"] = []
+            st.session_state["conversation_id"] = None
+            st.rerun()
+    else:
+        st.markdown(
+            f"""
+            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 8px; margin-top: 10px;">
+                <span style="color: #f59e0b; font-size: 0.82rem; font-weight: 600;">⚡ Active Caller: {st.session_state['student_id']}</span><br>
+                <span style="font-size: 0.75rem; color: #94a3b8;">Use Login / Sign Up tabs above for JWT credentials</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
@@ -447,8 +549,7 @@ with tab_memory:
                 table_records.append({
                     "Fact Key": fact.fact_key,
                     "Fact Value": fact.fact_value,
-                    "Source": fact.source,
-                    "Confidence": fact.confidence,
+                    "Created At": fact.created_at.strftime("%Y-%m-%d %H:%M:%S") if fact.created_at else "",
                     "Updated At": fact.updated_at.strftime("%Y-%m-%d %H:%M:%S") if fact.updated_at else "",
                 })
             st.dataframe(table_records, use_container_width=True)
