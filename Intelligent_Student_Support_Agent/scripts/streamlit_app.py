@@ -199,6 +199,13 @@ async def fetch_audit_logs(limit: int = 40) -> List[AuditLog]:
         res = await session.execute(stmt)
         return list(res.scalars().all())
 
+async def fetch_all_students() -> List[Student]:
+    """Fetches all registered students dynamically from PostgreSQL."""
+    async with AsyncSessionLocal() as session:
+        stmt = select(Student).order_by(Student.student_id.asc())
+        res = await session.execute(stmt)
+        return list(res.scalars().all())
+
 
 # ==============================================================================
 # Session State Initialization
@@ -213,6 +220,8 @@ if "pending_approval" not in st.session_state:
     st.session_state["pending_approval"] = None
 if "jwt_token" not in st.session_state:
     st.session_state["jwt_token"] = None
+if "auth_flash" not in st.session_state:
+    st.session_state["auth_flash"] = None
 
 
 # ==============================================================================
@@ -236,6 +245,24 @@ with st.sidebar:
 
     st.subheader("👤 Student Identity & Auth")
 
+    # Persistent Auth Flash Message (Done / Failed notification)
+    if st.session_state.get("auth_flash"):
+        flash = st.session_state["auth_flash"]
+        f_type = flash.get("type", "info")
+        f_title = flash.get("title", "")
+        f_msg = flash.get("message", "")
+
+        if f_type == "success":
+            st.success(f"**{f_title}**\n\n{f_msg}", icon="✅")
+        elif f_type == "error":
+            st.error(f"**{f_title}**\n\n{f_msg}", icon="❌")
+        else:
+            st.info(f"**{f_title}**\n\n{f_msg}", icon="ℹ️")
+
+        if st.button("✖ Dismiss Alert", key="dismiss_flash_btn", use_container_width=True):
+            st.session_state["auth_flash"] = None
+            st.rerun()
+
     auth_tab_login, auth_tab_signup, auth_tab_demo = st.tabs([
         "🔑 Login",
         "📝 Sign Up",
@@ -243,40 +270,114 @@ with st.sidebar:
     ])
 
     with auth_tab_login:
-        login_sid = st.text_input("Student ID:", value=st.session_state["student_id"], key="login_sid_input").strip().upper()
-        login_pw = st.text_input("Password:", value="Student@123", type="password", key="login_pw_input")
+        login_sid = st.text_input(
+            "Student ID:",
+            value=st.session_state["student_id"],
+            key="login_sid_input",
+            placeholder="e.g. STU001 or STU009"
+        ).strip().upper()
+        login_pw = st.text_input(
+            "Password:",
+            value="",
+            type="password",
+            key="login_pw_input",
+            placeholder="Enter account password"
+        )
         if st.button("Sign In", use_container_width=True, key="login_btn"):
-            async def _do_login(sid: str, pw: str):
-                async with AsyncSessionLocal() as session:
-                    srv = AuthService(session)
-                    return await srv.login(LoginRequest(student_id=sid, password=pw))
-
-            try:
-                tok_resp = run_async(_do_login(login_sid, login_pw))
-                st.session_state["jwt_token"] = tok_resp.access_token
-                st.session_state["student_id"] = login_sid
-                st.session_state["messages"] = []
-                st.session_state["conversation_id"] = None
-                st.success(f"Authenticated as {login_sid}!")
+            if not login_sid:
+                st.session_state["auth_flash"] = {
+                    "type": "error",
+                    "title": "Login Failed",
+                    "message": "Please enter a valid Student ID.",
+                }
                 st.rerun()
-            except Exception as e:
-                st.error(f"Login failed: {e}")
+            elif not login_pw:
+                st.session_state["auth_flash"] = {
+                    "type": "error",
+                    "title": "Login Failed",
+                    "message": "Please enter your password.",
+                }
+                st.rerun()
+            else:
+                async def _do_login(sid: str, pw: str):
+                    async with AsyncSessionLocal() as session:
+                        srv = AuthService(session)
+                        tok = await srv.login(LoginRequest(student_id=sid, password=pw))
+                        res_stu = await session.execute(select(Student).where(Student.student_id == sid))
+                        stu_rec = res_stu.scalar_one_or_none()
+                        stu_name = stu_rec.name if stu_rec else sid
+                        return tok, stu_name
+
+                try:
+                    tok_resp, stu_name = run_async(_do_login(login_sid, login_pw))
+                    st.session_state["jwt_token"] = tok_resp.access_token
+                    st.session_state["student_id"] = login_sid
+                    st.session_state["messages"] = []
+                    st.session_state["conversation_id"] = None
+                    st.session_state["auth_flash"] = {
+                        "type": "success",
+                        "title": "Login Done",
+                        "message": f"Successfully authenticated as {login_sid} ({stu_name})! Active JWT token issued.",
+                    }
+                    st.rerun()
+                except Exception as e:
+                    err_text = getattr(e, "message", str(e))
+                    st.session_state["auth_flash"] = {
+                        "type": "error",
+                        "title": "Login Failed",
+                        "message": f"Unable to authenticate {login_sid}: {err_text}",
+                    }
+                    st.rerun()
 
     with auth_tab_signup:
         st.caption("Enroll a new student or register password:")
-        new_sid = st.text_input("New Student ID:", value="", placeholder="e.g. STU007", key="new_sid_input").strip().upper()
-        new_name = st.text_input("Full Name:", value="", placeholder="e.g. Ananya Sen", key="new_name_input")
+        new_sid = st.text_input(
+            "New Student ID:",
+            value="",
+            placeholder="e.g. STU010",
+            key="new_sid_input"
+        ).strip().upper()
+        new_name = st.text_input(
+            "Full Name:",
+            value="",
+            placeholder="e.g. Nakul Jadhav",
+            key="new_name_input"
+        ).strip()
         new_prog = st.selectbox(
             "Programme:",
             ["PGDM AI and DS", "MBA Marketing", "B.Tech CSE", "M.Tech Data Science", "BBA", "PGDM General"],
             key="new_prog_input"
         )
-        new_batch = st.text_input("Batch:", value="2025-27", key="new_batch_input")
-        new_pw = st.text_input("Set Password (min 8 chars):", type="password", placeholder="Secret@123", key="new_pw_input")
+        new_batch = st.text_input("Batch:", value="2025-27", key="new_batch_input").strip()
+        new_pw = st.text_input(
+            "Set Password (min 8 chars):",
+            type="password",
+            placeholder="Secret@123",
+            key="new_pw_input"
+        )
 
         if st.button("Create Account & Enroll", use_container_width=True, key="signup_btn"):
-            if not new_sid or not new_pw or len(new_pw) < 8:
-                st.warning("Please provide a valid Student ID and password (min 8 characters).")
+            if not new_sid:
+                st.session_state["auth_flash"] = {
+                    "type": "error",
+                    "title": "Signup Failed",
+                    "message": "Student ID cannot be empty (e.g. STU010).",
+                }
+                st.rerun()
+            elif not new_name:
+                st.session_state["auth_flash"] = {
+                    "type": "error",
+                    "title": "Signup Failed",
+                    "message": "Please enter the student's full name.",
+                }
+                st.rerun()
+            elif not new_pw or len(new_pw) < 8:
+                st.session_state["auth_flash"] = {
+                    "type": "error",
+                    "title": "Signup Failed",
+                    "message": "Password must be at least 8 characters long.",
+                }
+                st.rerun()
             else:
                 async def _do_signup(sid: str, name: str, prog: str, batch: str, pw: str):
                     async with AsyncSessionLocal() as session:
@@ -286,53 +387,109 @@ with st.sidebar:
                         if not stu:
                             stu = Student(
                                 student_id=sid,
-                                name=name or f"Student {sid}",
+                                name=name,
                                 programme=prog,
                                 batch=batch,
                                 status="Enrolled",
                             )
                             session.add(stu)
                             await session.flush()
+                        else:
+                            if name:
+                                stu.name = name
+                            stu.programme = prog
+                            stu.batch = batch
+                            await session.flush()
 
-                        # 2. Register credentials
+                        # 2. Add initial fee record if missing
+                        res_fee = await session.execute(select(FeeRecord).where(FeeRecord.student_id == sid))
+                        if not res_fee.scalar_one_or_none():
+                            default_fee = FeeRecord(
+                                student_id=sid,
+                                total_fee=450000.0,
+                                paid=0.0,
+                                pending=450000.0,
+                                due_date="30 Nov 2026",
+                                status="Pending",
+                                receipt=f"RCP-{sid}-INIT",
+                            )
+                            session.add(default_fee)
+                            await session.flush()
+
+                        # 3. Register credentials in AuthCredentials table
                         srv = AuthService(session)
                         await srv.signup(SignupRequest(student_id=sid, password=pw))
-                        # 3. Log them in immediately and issue JWT
-                        return await srv.login(LoginRequest(student_id=sid, password=pw))
+
+                        # 4. Immediate login to issue JWT
+                        tok = await srv.login(LoginRequest(student_id=sid, password=pw))
+                        return tok, stu.name
 
                 try:
-                    tok_resp = run_async(_do_signup(new_sid, new_name, new_prog, new_batch, new_pw))
+                    tok_resp, enrolled_name = run_async(_do_signup(new_sid, new_name, new_prog, new_batch, new_pw))
                     st.session_state["jwt_token"] = tok_resp.access_token
                     st.session_state["student_id"] = new_sid
                     st.session_state["messages"] = []
                     st.session_state["conversation_id"] = None
-                    st.success(f"Enrolled & authenticated as {new_sid}!")
+                    st.session_state["auth_flash"] = {
+                        "type": "success",
+                        "title": "Signup Done",
+                        "message": f"Successfully enrolled & authenticated as {new_sid} ({enrolled_name})! Active JWT token issued.",
+                    }
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Sign up error: {e}")
+                    err_text = getattr(e, "message", str(e))
+                    st.session_state["auth_flash"] = {
+                        "type": "error",
+                        "title": "Signup Failed",
+                        "message": err_text,
+                    }
+                    st.rerun()
 
     with auth_tab_demo:
-        preset_students = {
-            "STU001": "STU001 — Rahul Sharma (PGDM AI and DS)",
-            "STU002": "STU002 — Priya Patel (MBA Marketing)",
-            "STU003": "STU003 — Amit Verma (B.Tech CSE)",
-            "STU004": "STU004 — Sneha Gupta (M.Tech Data Science)",
-            "STU005": "STU005 — Vikram Singh (BBA)",
-        }
-        idx = list(preset_students.keys()).index(st.session_state["student_id"]) if st.session_state["student_id"] in preset_students else 0
-        selected_preset = st.selectbox(
-            "Quick Demo Persona:",
-            options=list(preset_students.keys()),
-            format_func=lambda x: preset_students[x],
-            index=idx,
-            key="preset_select_box"
+        all_students = run_async(fetch_all_students())
+        students_dict = {s.student_id: s for s in all_students}
+        student_keys = list(students_dict.keys())
+
+        # Ensure current student is present in dropdown options
+        current_sid = st.session_state["student_id"]
+        if current_sid not in student_keys:
+            student_keys.insert(0, current_sid)
+
+        cur_idx = student_keys.index(current_sid) if current_sid in student_keys else 0
+
+        def _format_student(sid: str) -> str:
+            if sid in students_dict:
+                s = students_dict[sid]
+                return f"{s.student_id} — {s.name} ({s.programme})"
+            return sid
+
+        chosen_sid = st.selectbox(
+            "Select Enrolled Persona:",
+            options=student_keys,
+            index=cur_idx,
+            format_func=_format_student,
+            key="demo_persona_select"
         )
-        if selected_preset != st.session_state["student_id"]:
-            st.session_state["student_id"] = selected_preset
-            st.session_state["jwt_token"] = None
-            st.session_state["messages"] = []
-            st.session_state["conversation_id"] = None
-            st.rerun()
+        if st.button("⚡ Switch Persona", use_container_width=True, key="switch_persona_btn"):
+            if chosen_sid != st.session_state["student_id"]:
+                st.session_state["student_id"] = chosen_sid
+                st.session_state["jwt_token"] = None
+                st.session_state["messages"] = []
+                st.session_state["conversation_id"] = None
+                s_name = students_dict[chosen_sid].name if chosen_sid in students_dict else chosen_sid
+                st.session_state["auth_flash"] = {
+                    "type": "info",
+                    "title": "Switched Persona",
+                    "message": f"Active caller switched to {chosen_sid} ({s_name}).",
+                }
+                st.rerun()
+            else:
+                st.session_state["auth_flash"] = {
+                    "type": "info",
+                    "title": "Persona Active",
+                    "message": f"Already active as {chosen_sid}.",
+                }
+                st.rerun()
 
     # Active Auth Status Card
     if st.session_state.get("jwt_token"):
@@ -346,9 +503,15 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
         if st.button("🚪 Sign Out", use_container_width=True, key="logout_btn"):
+            old_sid = st.session_state["student_id"]
             st.session_state["jwt_token"] = None
             st.session_state["messages"] = []
             st.session_state["conversation_id"] = None
+            st.session_state["auth_flash"] = {
+                "type": "info",
+                "title": "Signed Out",
+                "message": f"Signed out from {old_sid}. Switched to guest mode.",
+            }
             st.rerun()
     else:
         st.markdown(
