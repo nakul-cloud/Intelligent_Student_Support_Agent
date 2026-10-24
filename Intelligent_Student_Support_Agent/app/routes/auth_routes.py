@@ -8,8 +8,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
+from app.config.settings import settings
 from app.controllers.auth_controller import AuthController
 from app.middlewares.auth import get_current_student
+from app.middlewares.rate_limiter import rate_limiter
 from app.schemas.auth_schema import ChangePasswordRequest, LoginRequest, SignupRequest
 from app.utils.response import success_response
 
@@ -33,6 +35,7 @@ async def signup(
     "/login",
     summary="Authenticate student and obtain JWT",
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limiter(max_requests=settings.rate_limit_auth_per_minute, window_seconds=60))],
 )
 async def login(
     request: LoginRequest,

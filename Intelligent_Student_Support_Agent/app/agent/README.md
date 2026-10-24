@@ -42,8 +42,8 @@ The **Agent Layer** manages the execution cycle of the AI Student Support Agent,
 
 | File | Core Component | Role & Functionality |
 |---|---|---|
-| [`agent_loop.py`](./agent_loop.py) | `run_agent_turn` | Executes the iterative ReAct-style loop: manages message history, calls the LLM, executes requested database/RAG tools, and enforces loop termination. |
-| [`client.py`](./client.py) | `get_async_groq_client`, `get_groq_client` | Configures and exposes singleton `AsyncOpenAI` instances pointed to the Groq API endpoint (`openai/gpt-oss-120b`) with optional telemetry decorators. |
+| [`agent_loop.py`](./agent_loop.py) | `run_agent_turn` | Executes the iterative ReAct-style loop: manages message history, calls the LLM via `LLMFactory` with dynamic fallback (`qwen/qwen3.8-27b`), executes requested database/RAG tools, and enforces loop termination. |
+| [`client.py`](./client.py) | `get_async_groq_client`, `get_groq_client` | Delegates client provisioning to `app/providers/llm/factory.py` and `GroqProvider`, exposing fallback-enabled `AsyncOpenAI` instances pointed to the Groq API endpoint. |
 
 ---
 

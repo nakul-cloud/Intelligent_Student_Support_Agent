@@ -1,14 +1,17 @@
 # ==============================================================================
-# Git Ignore - Intelligent Student Support Agent Application
+# Git Ignore - Intelligent Student Support Agent (Backend)
 # ==============================================================================
 
-# --- Environment & Secret Keys ---
+# --- Environment, Secrets & Credentials ---
 .env
 .env.*
 !.env.example
 *.pem
 *.key
 *.cert
+*.crt
+credentials.json
+client_secret*.json
 
 # --- Python Virtual Environments ---
 .venv/
@@ -16,8 +19,10 @@ venv/
 env/
 ENV/
 .env/
+env.bak/
+venv.bak/
 
-# --- Python Bytecode & Build Caches ---
+# --- Python Bytecode & Build Artifacts ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,7 +46,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# --- Testing & Type Checking Caches ---
+# --- Testing, Linting & Type Checking Caches ---
 .pytest_cache/
 .coverage
 .coverage.*
@@ -49,8 +54,40 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 .hypothesis/
+.tox/
+.nox/
 
-# --- Frontend Node & Package Managers (nested inside Frontend/) ---
+# --- Observability, Logs & Runtime Traces ---
+*.log
+logs/*
+!logs/.gitkeep
+traces/*
+!traces/.gitkeep
+!traces/071c3969.json
+!traces/75687408.json
+!traces/bd5492f8.json
+!traces/c124a2d0.json
+!traces/d2ab2983.json
+!traces/d33266c6.json
+
+# --- Database, Vector Stores & Local Storage ---
+postgres_data/
+redis_data/
+qdrant_data/
+qdrant_storage/
+**/qdrant_storage/
+*.sqlite
+*.sqlite3
+*.db
+
+# --- HuggingFace, PyTorch & Model Caches ---
+.cache/
+huggingface/
+checkpoints/
+models_cache/
+torch_cache/
+
+# --- Nested Frontend Build Outputs (if built from backend root) ---
 node_modules/
 **/node_modules/
 Frontend/**/node_modules/
@@ -69,25 +106,7 @@ lerna-debug.log*
 .eslintcache
 .stylelintcache
 .turbo/
-
-# --- Observability & Runtime Logs ---
-*.log
-logs/*
-!logs/.gitkeep
-
-# --- Database, Vector Stores & Local Storage ---
-postgres_data/
-qdrant_data/
-qdrant_storage/
-**/qdrant_storage/
-*.sqlite
-*.sqlite3
-*.db
-
-# --- HuggingFace & PyTorch Cache ---
-.cache/
-huggingface/
-checkpoints/
+.vite/
 
 # --- Operating System & Editor Files ---
 .DS_Store
@@ -99,9 +118,14 @@ $RECYCLE.BIN/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+!.vscode/launch.json
 *.sublime-workspace
 *.sublime-project
 *.swp
 *~
+*.bak
+*.tmp
 *.suo
 *.sln
+*.ntvs*
+*.njsproj

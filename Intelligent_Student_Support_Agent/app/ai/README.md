@@ -54,7 +54,7 @@ The **AI Layer** implements the end-to-end Retrieval-Augmented Generation (RAG) 
 |---|---|---|
 | [`pdf_parser.py`](./ingestion/pdf_parser.py) | `PDFParser` | Extracts raw text, detect headings (e.g., *Annexures*, *Policy Clauses*), and maps page provenance. |
 | [`chunker.py`](./ingestion/chunker.py) | `SemanticChunker` | Splits extracted text into coherent semantic windows with clause preservation and boundary overlap. |
-| [`embedder.py`](./ingestion/embedder.py) | `Embedder` | Generates 1536-dimensional dense vector embeddings using local sentence transformers. |
+| [`embedder.py`](./ingestion/embedder.py) | `LocalEmbedder` | Generates 1536-dimensional dense vector embeddings using local sentence transformers with thread-safe singleton caching, LRU query caching (<0.01ms), and `torch.inference_mode()`. |
 
 ### B. Retrieval Subsystem (`app/ai/retrieval`)
 | File | Component | Description |

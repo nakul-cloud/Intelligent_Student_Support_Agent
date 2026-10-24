@@ -10,7 +10,8 @@
 | Section | Focus Area |
 |---|---|
 | 🏛️ **[System Architecture](#️-system-architecture)** | Multi-tier design, clean layering, and data flows |
-| 📁 **[Module Documentation Index](#-module-documentation-index)** | Clickable guides for all 14 backend subpackages |
+| 📡 **[Full API Documentation](./API_DOCUMENTATION.md)** | Complete RESTful contracts, schemas, headers, & curl commands |
+| 📁 **[Module Documentation Index](#-module-documentation-index)** | Clickable guides for all 15 backend subpackages |
 | 👥 **[Student Personas & Option 2](#-student-personas--option-2-enrollment)** | Pre-seeded PostgreSQL records (`STU001`–`STU020`) |
 | 🧠 **[Dual-Tier Memory Mechanics](#-dual-tier-memory-mechanics)** | Ephemeral Redis cache + Durable PostgreSQL memory |
 | 🛡️ **[Security & Guardrails](#️-enterprise-security--guardrail-architecture)** | JWT authentication, ownership controls & audit trails |
@@ -83,6 +84,7 @@ Every backend subpackage contains a dedicated **`README.md`** detailing its resp
 | **Tools** | [📖 `app/tools/README.md`](./app/tools/README.md) | Real database and RAG tools invoked dynamically by the agent during multi-turn chat. |
 | **Memory** | [📖 `app/memory/README.md`](./app/memory/README.md) | Two-tier state: Redis 24h sliding window + PostgreSQL durable facts with privacy scrubbing. |
 | **Agent** | [📖 `app/agent/README.md`](./app/agent/README.md) | Multi-turn agent loop, Groq LLM client provider, and token/latency tracing. |
+| **Providers** | [📖 `app/providers/README.md`](./app/providers/README.md) | Multi-provider LLM factory, dynamic fallback (`qwen/qwen3.8-27b`), and wire clients. |
 | **AI & RAG** | [📖 `app/ai/README.md`](./app/ai/README.md) | PDF extraction, dynamic semantic chunking, local embeddings, and Qdrant vector search. |
 | **Prompts** | [📖 `app/prompts/README.md`](./app/prompts/README.md) | Dynamic system prompt builder, persona directives, citation rules, and memory injection. |
 | **Config** | [📖 `app/config/README.md`](./app/config/README.md) | Environment configuration (`BaseSettings`), PostgreSQL engine, and Redis client. |
@@ -156,24 +158,33 @@ The agent implements a privacy-first, dual-tier memory system:
 
 ## 🌐 API Endpoint Contracts & Live Verification
 
-### 1. Route Contracts Summary
+### 1. Route Contracts Summary (All 17 Endpoints)
 
-* **Authentication** (`/api/v1/auth`):
-  * `POST /signup` — Register credentials for pre-enrolled student ID (`Option 2`).
-  * `POST /login` — Authenticate credentials and receive signed Bearer JWT token.
-* **Student Academic Records** (`/api/v1/student`, Protected via Bearer JWT):
+*For exhaustive payload schemas, cURL commands, OWASP headers, and error code envelopes, see **[📖 Full API Documentation (`API_DOCUMENTATION.md`)](./API_DOCUMENTATION.md)** and **[🛣️ Routes Module Specification (`app/routes/README.md`)](./app/routes/README.md)**.*
+
+* **Authentication & Identity** (`/api/v1/auth`):
+  * `POST /signup` — Enrolls existing student from university roster (`Option 2`).
+  * `POST /login` — Authenticates credentials and issues signed Bearer JWT (`20 req/min rate limit`).
+  * `POST /change-password` — Immediately updates password for authenticated student (`Bearer JWT`).
+  * `GET /me` — Verifies token validity and returns authenticated student profile (`Bearer JWT`).
+* **Multi-Turn AI Agent Chat** (`/api/v1/chat`, Protected via Bearer JWT):
+  * `POST /` — Multi-turn ReAct agent reasoning turn with dynamic Groq fallback (`qwen/qwen3.8-27b`) and sub-second RAG retrieval (`30 req/min rate limit`).
+  * `GET /conversations` — Lists past and active chat sessions owned by the authenticated student.
+  * `GET /conversations/{id}/messages` — Chronological message turns, roles, and execution metadata for a session.
+  * `DELETE /conversations/{id}` — Permanently deletes a chat session and cascading message turns.
+* **Student Academic Records** (`/api/v1/student`, Protected via Bearer JWT, Tenant-Isolated):
   * `GET /profile` — Authenticated profile (programme, batch, status, contact info).
-  * `PUT /profile` — Update phone, email, and campus address directly in PostgreSQL.
+  * `PUT /profile` — Updates phone, email, and campus address directly in PostgreSQL.
   * `GET /fees` — Tuition fee ledger breakdown (total, paid, pending, due date, receipt).
   * `GET /scholarship` — Active scholarship award, percentage, and semester grant amount.
   * `GET /tickets` — Support and grievance tickets filed by the authenticated student.
-* **Conversational Agent** (`/api/v1/chat`, Protected via Bearer JWT):
-  * `POST /` — Multi-turn agent execution with tool calling, RAG citations, and memory recall.
-  * `GET /conversations` — Lists conversation sessions owned by the authenticated caller.
-  * `GET /conversations/{id}/messages` — Retrieves turn history for a conversation.
-* **Audit & Health**:
-  * `GET /api/v1/audit/logs` — Security event log stream.
-  * `GET /health` — Service health status (`PostgreSQL`, `Redis`, `Qdrant`).
+* **Security Audit & Compliance** (`/api/v1/audit`):
+  * `GET /logs` — Immutable security audit trail stream with filtering by decision (`ALLOWED`, `BLOCKED`, `APPROVED`, `REJECTED`).
+  * `GET /summary` — Aggregated compliance metrics for Assignment 2 verification.
+* **Policy Document Ingestion** (`/api/v1/ingest`):
+  * `POST /` — Multipart PDF handbook upload, semantic chunking, and Qdrant vectorization.
+* **Health & Diagnostics**:
+  * `GET /health` — Deep non-blocking async probe across PostgreSQL (`SELECT 1`), Redis (`ping`), and Qdrant (`get_collections`).
 
 ---
 

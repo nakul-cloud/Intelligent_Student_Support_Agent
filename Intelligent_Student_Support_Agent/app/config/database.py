@@ -16,11 +16,13 @@ from app.config.settings import settings
 from app.models.base import Base
 from app.utils.logger import logger
 
-# Primary PostgreSQL Engine initialization
+# Primary PostgreSQL Engine initialization with production pool tuning
 engine = create_async_engine(
     settings.database_url,
     echo=False,
     pool_pre_ping=True,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
 )
 
 AsyncSessionLocal = async_sessionmaker(

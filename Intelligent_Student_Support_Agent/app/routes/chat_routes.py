@@ -10,8 +10,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
+from app.config.settings import settings
 from app.controllers.chat_controller import ChatController
 from app.middlewares.auth import get_current_student
+from app.middlewares.rate_limiter import rate_limiter
 from app.schemas.chat_schema import ChatRequest
 
 router = APIRouter(prefix="/chat", tags=["Agent Chat"])
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/chat", tags=["Agent Chat"])
     "",
     summary="Submit user query to multi-turn student support agent",
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limiter(max_requests=settings.rate_limit_chat_per_minute, window_seconds=60))],
 )
 async def chat(
     request: ChatRequest,

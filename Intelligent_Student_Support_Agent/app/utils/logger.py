@@ -32,4 +32,16 @@ logger.add(
     diagnose=True,
 )
 
+# Structured JSON file handler for centralized log aggregation (ELK / Datadog / Loki)
+logger.add(
+    "logs/application.json.log",
+    rotation="20 MB",
+    retention="14 days",
+    compression="zip",
+    encoding="utf-8",
+    level=settings.log_level.upper(),
+    enqueue=True,
+    serialize=True,
+)
+
 __all__ = ["logger"]

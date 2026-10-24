@@ -31,20 +31,26 @@ def error_response(
     status_code: int = 400,
     message: str = "Error",
     errors: Optional[Any] = None,
+    request_id: Optional[str] = None,
 ) -> JSONResponse:
-    """Return a uniform error response structure.
+    """Return a uniform error response structure with optional correlation request ID.
     
     Format:
         {
             "status": "error" | "fail",
             "message": "...",
+            "request_id": "...",
             "errors": ...
         }
     """
     status_text = "fail" if 400 <= status_code < 500 else "error"
-    payload = {
+    payload: dict[str, Any] = {
         "status": status_text,
         "message": message,
         "errors": errors,
     }
-    return JSONResponse(status_code=status_code, content=jsonable_encoder(payload))
+    if request_id:
+        payload["request_id"] = request_id
+        
+    headers = {"X-Request-ID": request_id} if request_id else None
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(payload), headers=headers)

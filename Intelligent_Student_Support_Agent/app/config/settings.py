@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "openai/gpt-oss-120b"
+    groq_fallback_model: str = "qwen/qwen3.8-27b"
+    openai_api_key: str = ""
     agent_max_turns: int = 6
     agent_temperature: float = 0.1
 
@@ -92,12 +94,31 @@ class Settings(BaseSettings):
             a.strip() for a in self.sensitive_actions_str.split(",") if a.strip()
         )
 
+    # --- Connection Pool Tuning ---
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
+
+    # --- Security & CORS Settings ---
+    allowed_origins_str: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    )
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        """Parsed list of allowed CORS origins."""
+        if self.app_env == "development" and not self.allowed_origins_str:
+            return ["*"]
+        return [o.strip() for o in self.allowed_origins_str.split(",") if o.strip()]
+
     # --- Application Runtime & Logging ---
     app_env: str = "development"
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "INFO"
+    rate_limit_chat_per_minute: int = 30
+    rate_limit_auth_per_minute: int = 20
 
 
 # Export singleton settings instance
 settings = Settings()
+

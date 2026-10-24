@@ -300,7 +300,7 @@ class ChatService:
         self,
         student_id: str,
         message: str,
-        conversation_id: Optional[Any] = None,
+        conversation_id: Optional[UUID | str] = None,
         debug: bool = False,
     ) -> ChatResponse:
         """Alias for process_turn providing intuitive parameter naming."""

@@ -18,6 +18,7 @@ import time
 from typing import Any, Callable, Coroutine
 from app.agent.client import async_groq_client
 from app.config.settings import settings
+from app.providers.llm.factory import LLMFactory
 from app.utils.logger import logger
 from tracing.tracer import Tracer
 
@@ -77,11 +78,11 @@ async def run_agent(
         # Measure LLM inference latency
         t_model_start = time.perf_counter()
         try:
-            response = await async_groq_client.chat.completions.create(
-                model=settings.groq_model,
+            response = await LLMFactory.create_completion_with_fallback(
                 messages=messages,
                 tools=tool_schemas if tool_schemas else None,
                 temperature=settings.agent_temperature,
+                client=async_groq_client,
             )
         except Exception as exc:
             t_model_error = (time.perf_counter() - t_model_start) * 1000.0
