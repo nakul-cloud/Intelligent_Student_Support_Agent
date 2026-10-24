@@ -15,6 +15,39 @@
 
 ---
 
+## 💡 What Does This Project Do? (In Simple Words)
+
+In traditional universities, students often face long administrative queues, delayed emails, or have to navigate dense 50-page handbook PDFs just to find basic information.
+
+This project is an **intelligent, 24/7 AI-powered student advisor and help desk** that solves this problem completely. An authenticated student simply logs into the web portal or CLI and chats in plain language. The AI agent automatically:
+
+1. **📖 Answers University Policy Questions with Exact Proof**:
+   - Understands natural questions about **exam eligibility, grading criteria, fee refund deadlines, medical leave, and the 70% minimum attendance rule**.
+   - Searches the official 44-page Student Handbook using two-stage semantic vector search and Cross-Encoder re-ranking.
+   - Directly cites the exact **section number, section title, and page number** (e.g., *[Handbook Section 10.2: Attendance, Page 9]*).
+
+2. **💳 Retrieves Personal Student Records in Real Time**:
+   - Connects to live PostgreSQL databases to retrieve the student's exact **tuition fee ledger, pending balance, payment due dates, and scholarship status**.
+   - No manual registrar or accounting intervention required for balance inquiries.
+
+3. **🎫 Submits and Tracks Support Tickets**:
+   - If an inquiry requires human intervention or escalation, the student can raise a formal support ticket directly within the chat.
+   - The agent validates the ticket details, logs it in PostgreSQL, and allows the student to check real-time resolution status anytime.
+
+4. **🧠 Remembers Context Across Sessions (Two-Tier Memory)**:
+   - Remembers the student's identity (program, batch, academic status) and previous questions across turns and sessions.
+   - Uses an ephemeral Redis L1 cache for fast in-session conversation and permanent PostgreSQL L2 storage for long-term facts—so students never have to repeat themselves.
+
+5. **🛡️ Enforces Strict Privacy & Security Guardrails**:
+   - Every request is secured with Bearer JWT tokens.
+   - Automated ownership guardrails guarantee that **no student can access another student's fee, grade, or scholarship records**. Unauthorized attempts are immediately blocked and logged.
+
+6. **⚡ Ultra-Fast & Highly Reliable**:
+   - Powered by high-speed Groq LLMs responding in under 1 second.
+   - Features **automatic dynamic fallback** (`qwen/qwen3.8-27b`) if the primary model reaches rate limits or connection timeouts, ensuring the service stays online 24/7.
+
+---
+
 ## 📌 Master Documentation Hub
 
 | Documentation Guide | Focus Area & Description |
@@ -76,10 +109,10 @@ sequenceDiagram
     autonumber
     actor Student as Student (Portal / CLI)
     participant Gateway as FastAPI Gateway (:8000)
-    participant Mem as Memory Manager (Redis + Postgres)
+    participant Mem as Memory (Redis + Postgres)
     participant Agent as ReAct Agent Loop
     participant Tools as Domain Tools (DB / RAG)
-    participant DB as PostgreSQL / Redis / Qdrant
+    participant DB as Storage (SQL & Qdrant)
 
     Student->>Gateway: POST /api/v1/chat (Prompt)
     Gateway->>Gateway: Rate Limit & Bearer JWT Check
@@ -87,19 +120,17 @@ sequenceDiagram
     Mem-->>Gateway: Injected Context
     Gateway->>Agent: Run ReAct Loop with Tools
     
-    rect rgb(240, 248, 255)
-        Agent->>Tools: Call get_fee_status(student_id)
-        Tools->>DB: Query fee_records in PostgreSQL
-        DB-->>Tools: Ledger Data
-        Tools-->>Agent: Observation: Pending Fee Status
-    end
+    Note over Agent,DB: Step A: Live Database Lookup (e.g. Tuition Fees)
+    Agent->>Tools: Call get_fee_status(student_id)
+    Tools->>DB: Query fee_records in PostgreSQL
+    DB-->>Tools: Ledger Data
+    Tools-->>Agent: Observation: Pending Fee Status
 
-    rect rgb(255, 250, 240)
-        Agent->>Tools: Call search_student_handbook(query)
-        Tools->>DB: Qdrant Search + Cross-Encoder Re-Rank
-        DB-->>Tools: Top Policy Excerpts
-        Tools-->>Agent: Observation: Cited Policy Text
-    end
+    Note over Agent,DB: Step B: Semantic Policy Search (Two-Stage RAG)
+    Agent->>Tools: Call search_student_handbook(query)
+    Tools->>DB: Qdrant Search + Cross-Encoder Re-Rank
+    DB-->>Tools: Top Policy Excerpts
+    Tools-->>Agent: Observation: Cited Policy Text
 
     Agent->>Mem: Save Ephemeral Turns (Redis L1)
     Agent->>Mem: Persist Allowed Facts (Postgres L2)

@@ -5,6 +5,21 @@
 
 ---
 
+## 💡 What Does This Project Do? (In Simple Words)
+
+In traditional universities, students often face long administrative queues, delayed emails, or have to navigate dense 50-page handbook PDFs just to find basic information.
+
+This project is an **intelligent, 24/7 AI-powered student advisor and help desk** that solves this problem completely:
+
+1. **📖 Official Policy Q&A**: Answers questions on exam attendance (70% rule), grading, fee refunds, and academic guidelines directly citing the 44-page official Student Handbook with section and page numbers.
+2. **💳 Live Fee & Scholarship Lookups**: Connects to live PostgreSQL databases to retrieve exact tuition balances, due dates, and scholarship records.
+3. **🎫 Helpdesk Ticketing**: Allows students to submit and track administrative support tickets directly through conversational chat.
+4. **🧠 Two-Tier Memory**: Remembers student identity, past queries, and academic context across sessions (Redis L1 cache + PostgreSQL L2 permanent storage).
+5. **🛡️ Strict Privacy Guardrails**: Ensures no student can ever view another student's private financial or academic records.
+6. **⚡ Instant & Reliable**: Sub-second responses powered by Groq LLMs with dynamic failover (`qwen/qwen3.8-27b`) if primary endpoints are busy.
+
+---
+
 ## ⚡ Quick Navigation
 
 | Section | Focus Area |
