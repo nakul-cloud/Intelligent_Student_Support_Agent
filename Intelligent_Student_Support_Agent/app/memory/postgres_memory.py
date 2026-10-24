@@ -75,7 +75,7 @@ class PostgresMemoryStore:
             await self.session.execute(stmt)
 
         await self.session.commit()
-        logger.info(f"Upserted {len(facts)} memory facts into PostgreSQL for {student_id}")
+        logger.info(f"Upserted {len(facts)} memory facts into store for {student_id}")
 
     async def delete_facts(self, student_id: str) -> None:
         """Deletes all durable memory facts for a student."""

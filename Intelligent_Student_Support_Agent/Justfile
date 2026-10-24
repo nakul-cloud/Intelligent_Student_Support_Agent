@@ -34,10 +34,13 @@ seed:
 ingest:
     uv run python scripts/ingest_handbook.py
 
-# --- Application Runtimes ---
+# --- Backend Application Runtimes ---
 # Start FastAPI backend server with hot-reload (port 8000)
 server:
     uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Convenient alias for server
+backend: server
 
 # Launch Streamlit development & testing UI
 streamlit:
@@ -46,6 +49,30 @@ streamlit:
 # Run interactive terminal agent CLI
 cli:
     uv run python app/main.py --cli
+
+# --- Frontend Application Runtimes ---
+# Start React/Vite student portal frontend dev server (port 3000)
+frontend:
+    cd Frontend/student-portal; npm run dev
+
+# Convenient alias for frontend
+client: frontend
+
+# Install frontend npm dependencies
+frontend-install:
+    cd Frontend/student-portal; npm install
+
+# Build frontend production bundle
+frontend-build:
+    cd Frontend/student-portal; npm run build
+
+# Preview built frontend production bundle
+frontend-preview:
+    cd Frontend/student-portal; npm run preview
+
+# Lint frontend codebase
+frontend-lint:
+    cd Frontend/student-portal; npm run lint
 
 # --- Benchmarks & Evaluation ---
 # Run 8 benchmark evaluation scenarios and output metrics table

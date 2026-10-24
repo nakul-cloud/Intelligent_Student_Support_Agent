@@ -8,7 +8,7 @@ Adheres strictly to SOLID Principles:
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.auth_schema import LoginRequest, SignupRequest
+from app.schemas.auth_schema import ChangePasswordRequest, LoginRequest, SignupRequest
 from app.services.auth_service import AuthService
 from app.utils.response import success_response
 
@@ -37,3 +37,19 @@ class AuthController:
             message="Authentication successful.",
             data=token_response.model_dump(),
         )
+
+    @staticmethod
+    async def change_password(
+        student_id: str,
+        request: ChangePasswordRequest,
+        session: AsyncSession,
+    ):
+        """Updates the password for an authenticated student."""
+        service = AuthService(session)
+        result = await service.change_password(student_id, request.new_password)
+        return success_response(
+            status_code=status.HTTP_200_OK,
+            message="Password updated successfully.",
+            data=result,
+        )
+

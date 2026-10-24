@@ -24,10 +24,16 @@ from app.prompts.system_prompt import build_system_prompt
 from app.schemas.chat_schema import ChatResponse, ConversationSummary, MessageItem
 from app.schemas.tool_schemas import TOOL_SCHEMAS
 from app.services.approval_service import ApprovalService
+from app.tools.auth_tool import update_student_password
 from app.tools.fee_tool import get_fee_status
+from app.tools.profile_tool import update_student_profile
 from app.tools.rag_tool import search_student_handbook
 from app.tools.scholarship_tool import check_scholarship
-from app.tools.ticket_tool import create_support_ticket
+from app.tools.ticket_tool import (
+    create_support_ticket,
+    get_ticket_status,
+    list_student_tickets,
+)
 from app.utils.logger import logger
 from tracing.tracer import Tracer
 
@@ -63,12 +69,38 @@ class ChatService:
                 kwargs["student_id"] = student_id
             return await create_support_ticket(**kwargs)
 
+        async def contextual_get_ticket_status(**kwargs):
+            if "student_id" not in kwargs or not kwargs["student_id"]:
+                kwargs["student_id"] = student_id
+            return await get_ticket_status(**kwargs)
+
+        async def contextual_list_student_tickets(**kwargs):
+            if "student_id" not in kwargs or not kwargs["student_id"]:
+                kwargs["student_id"] = student_id
+            return await list_student_tickets(**kwargs)
+
+        async def contextual_update_password(**kwargs):
+            if "student_id" not in kwargs or not kwargs["student_id"]:
+                kwargs["student_id"] = student_id
+            return await update_student_password(**kwargs)
+
+        async def contextual_update_profile(**kwargs):
+            if "student_id" not in kwargs or not kwargs["student_id"]:
+                kwargs["student_id"] = student_id
+            return await update_student_profile(**kwargs)
+
         return {
             "get_fee_status": contextual_fee_status,
             "check_scholarship": contextual_scholarship,
             "create_support_ticket": contextual_ticket,
+            "get_ticket_status": contextual_get_ticket_status,
+            "list_student_tickets": contextual_list_student_tickets,
+            "update_student_password": contextual_update_password,
+            "update_student_profile": contextual_update_profile,
             "search_student_handbook": search_student_handbook,
         }
+
+
 
     async def get_or_create_conversation(
         self, student_id: str, conversation_id: Optional[UUID] = None, first_message: str = ""
@@ -112,17 +144,30 @@ class ChatService:
 
         summaries = []
         for conv in conversations:
-            summaries.append(
-                ConversationSummary(
-                    id=str(conv.id),
-                    student_id=conv.student_id,
-                    title=conv.title,
-                    status=conv.status,
-                    created_at=conv.created_at,
-                    message_count=len(conv.messages) if conv.messages else 0,
+            msg_count = len(conv.messages) if conv.messages else 0
+            if msg_count > 0:
+                summaries.append(
+                    ConversationSummary(
+                        id=str(conv.id),
+                        student_id=conv.student_id,
+                        title=conv.title,
+                        status=conv.status,
+                        created_at=conv.created_at,
+                        message_count=msg_count,
+                    )
                 )
-            )
         return summaries
+
+    async def delete_conversation(self, student_id: str, conversation_id: UUID) -> bool:
+        """Deletes a conversation session and all its message turns."""
+        conv = await self.get_or_create_conversation(student_id, conversation_id)
+        from sqlalchemy import delete
+        await self.session.execute(delete(Message).where(Message.conversation_id == conv.id))
+        await self.session.delete(conv)
+        await self.session.commit()
+        logger.info(f"ChatService: Deleted conversation {conversation_id} for student {student_id}")
+        return True
+
 
     async def get_conversation_messages(
         self, student_id: str, conversation_id: UUID
@@ -175,8 +220,8 @@ class ChatService:
         history_stmt = (
             select(Message)
             .where(Message.conversation_id == conversation.id, Message.id != user_turn.id)
-            .order_by(Message.created_at.desc())
-            .limit(10)
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(20)
         )
         history_res = await self.session.execute(history_stmt)
         history_turns = list(reversed(history_res.scalars().all()))

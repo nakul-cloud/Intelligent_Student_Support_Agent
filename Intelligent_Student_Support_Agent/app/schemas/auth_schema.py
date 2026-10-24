@@ -51,3 +51,15 @@ class TokenData(BaseModel):
     """Decoded JWT payload data contract."""
 
     student_id: str = Field(..., description="Authenticated student identifier")
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request payload for updating student password."""
+
+    new_password: str = Field(
+        ...,
+        min_length=6,
+        description="New password (minimum 6 characters)",
+        examples=["NewSecret@2026"],
+    )
+

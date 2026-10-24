@@ -27,7 +27,16 @@ class QdrantVectorStore:
         """Initialize connection to Qdrant vector store using injected or configured settings."""
         self.url = url or settings.qdrant_url
         self.collection_name = collection_name or settings.qdrant_collection_name
-        self.client = QdrantClient(url=self.url)
+        try:
+            client = QdrantClient(url=self.url, timeout=1.5)
+            client.get_collections()
+            self.client = client
+            logger.info(f"Connected to remote Qdrant server at '{self.url}'")
+        except Exception as exc:
+            logger.warning(
+                f"Remote Qdrant at '{self.url}' unavailable ({exc}). Using local embedded Qdrant persistence at './qdrant_storage'..."
+            )
+            self.client = QdrantClient(path="./qdrant_storage")
         self.dimensions = settings.embedding_dimensions
         self.ensure_collection_exists()
 

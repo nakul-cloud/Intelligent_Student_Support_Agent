@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.controllers.auth_controller import AuthController
 from app.middlewares.auth import get_current_student
-from app.schemas.auth_schema import LoginRequest, SignupRequest
+from app.schemas.auth_schema import ChangePasswordRequest, LoginRequest, SignupRequest
 from app.utils.response import success_response
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -42,6 +42,24 @@ async def login(
     return await AuthController.login(request, session)
 
 
+@router.post(
+    "/change-password",
+    summary="Update authenticated student password",
+    status_code=status.HTTP_200_OK,
+)
+async def change_password(
+    request: ChangePasswordRequest,
+    student_id: str = Depends(get_current_student),
+    session: AsyncSession = Depends(get_db),
+):
+    """Immediately updates password in database for the authenticated student."""
+    return await AuthController.change_password(
+        student_id=student_id,
+        request=request,
+        session=session,
+    )
+
+
 @router.get(
     "/me",
     summary="Verify current authenticated student token",
@@ -56,3 +74,4 @@ async def get_me(
         message="Token is valid.",
         data={"student_id": student_id, "authenticated": True},
     )
+

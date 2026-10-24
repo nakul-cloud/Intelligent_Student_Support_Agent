@@ -1,0 +1,49 @@
+# ==============================================================================
+# Git Ignore - Student Support Portal Frontend (Vite + React)
+# ==============================================================================
+
+# --- Dependencies ---
+node_modules/
+
+# --- Production Build Outputs ---
+dist/
+dist-ssr/
+build/
+out/
+
+# --- Local Environment & Overrides ---
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+
+# --- Package Manager Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Cache & Linting ---
+.eslintcache
+.stylelintcache
+.turbo/
+.vite/
+
+# --- Operating System & Editor Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~

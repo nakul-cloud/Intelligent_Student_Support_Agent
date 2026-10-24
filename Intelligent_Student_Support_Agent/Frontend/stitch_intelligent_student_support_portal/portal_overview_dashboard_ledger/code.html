@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-secondary-container": "#5e656d", "on-tertiary": "#ffffff", "on-primary-fixed": "#001453", "on-surface": "#131b2e", "primary-fixed": "#dde1ff", "on-secondary-fixed": "#151c23", "primary-container": "#1e40af", "inverse-primary": "#b8c4ff", "on-background": "#131b2e", "secondary-fixed": "#dce3ec", "surface-tint": "#3755c3", "on-error": "#ffffff", "on-error-container": "#93000a", "surface-dim": "#d2d9f4", "on-primary": "#ffffff", "on-secondary": "#ffffff", "surface-container-high": "#e2e7ff", "surface-container": "#eaedff", "on-tertiary-fixed-variant": "#802a00", "on-primary-container": "#a8b8ff", "outline": "#757684", "tertiary": "#611e00", "surface-bright": "#faf8ff", "background": "#faf8ff", "on-secondary-fixed-variant": "#40484f", "tertiary-fixed-dim": "#ffb59a", "tertiary-fixed": "#ffdbce", "on-primary-fixed-variant": "#173bab", "surface": "#faf8ff", "surface-variant": "#dae2fd", "surface-container-lowest": "#ffffff", "surface-container-low": "#f2f3ff", "secondary-container": "#dce3ec", "on-tertiary-container": "#ffa583", "on-surface-variant": "#444653", "primary": "#00288e", "error-container": "#ffdad6", "primary-fixed-dim": "#b8c4ff", "surface-container-highest": "#dae2fd", "tertiary-container": "#872d00", "secondary": "#585f67", "on-tertiary-fixed": "#380d00", "secondary-fixed-dim": "#c0c7d0", "inverse-on-surface": "#eef0ff", "error": "#ba1a1a", "inverse-surface": "#283044", "outline-variant": "#c4c5d5" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "gutter": "1.5rem", "margin": "2rem", "gutter-mobile": "1rem", "space-sm": "0.5rem", "margin-mobile": "1rem", "space-lg": "1.5rem", "space-md": "1rem", "space-xl": "2.5rem", "space-xs": "0.25rem" }, "fontFamily": { "label-sm": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "body-lg": ["Inter"], "data-mono": ["Inter"], "headline-sm": ["Inter"], "body-sm": ["Inter"], "headline-lg": ["Inter"], "body-md": ["Inter"], "headline-xl-mobile": ["Inter"], "headline-xl": ["Inter"] }, "fontSize": { "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}], "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}], "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}], "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}], "headline-sm": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600"}], "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}], "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}], "headline-xl-mobile": ["26px", {"lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-lowest border-r border-outline-variant z-50 flex flex-col justify-between overflow-y-auto"><div class="flex flex-col"><div class="p-space-lg border-b border-outline-variant flex items-center gap-space-md"><img alt="University Portal Emblem" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XMygc5MoBT9L17w0e6BpWEWwBNuvhiy_bOIIfaKiXpEG34hurkXLkp-1_rFnTJ6t0IRdwZtyKSmm-BsANkg73e_uXyAor6WxRSSBbItwrWbLoqE2hafkjnYjIufJp3czg6UpqQ-foE131nvYLMqKYWpXtirNVrB13EYYtmDJsbHxVLKl-B3DP2yHBhQgu5xPyfkackjgFvUPN8xoLIUnckpJLpehhixOhyAjt5LFJ8iM0nWaZKuaNtWGM"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface leading-tight">Apex University</span><span class="font-label-sm text-label-sm text-secondary">Student Support Portal</span></div></div><div class="p-space-md mx-space-md my-space-md bg-surface-container-low rounded-xl border border-outline-variant"><div class="flex items-center gap-space-sm mb-space-sm"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCijZeXfgosy-_Y1cagziKpy_zD-InGaynvchD03XBRhW6vYqGpHUlyheoat3ZqCWyMuU8iL6vqBYtqBi-JrD8EwNG5dnBHqpPOVbZ8XiN9rEhFF3V6MQ2XH8wyJk_5GRUiV9r1v6zgle3nqj2nfk33YsOBxmnEH4WC3GlaTCI2GNoWoX2tN23k6TLVn5zitUuwmTXQ4cjddNtgtUwZxCBY82Kt1Zukop6EBU00EugSKHaTVSFrpbOiJg"/><div class="flex flex-col min-w-0"><span class="font-label-md text-label-md text-on-surface truncate font-semibold">Elena Vance</span><span class="font-data-mono text-data-mono text-secondary text-xs truncate">STU-2024-8841</span></div></div><div class="pt-space-xs border-t border-outline-variant flex flex-col gap-0.5"><span class="font-body-sm text-body-sm text-on-surface-variant truncate">B.S. Computer Science & AI</span><span class="font-label-sm text-label-sm text-secondary">Cohort 2024</span></div></div><nav class="flex flex-col gap-1 px-space-md mt-space-xs" data-active-classes="bg-primary-container text-on-primary font-semibold"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg transition-colors bg-primary-container text-on-primary font-semibold" data-path="overview" href="#"><span class="material-symbols-outlined text-[20px]">dashboard</span><span>Overview</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="ai-assistant" href="#"><span class="material-symbols-outlined text-[20px]">smart_toy</span><span>AI Assistant</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="records-tickets" href="#"><span class="material-symbols-outlined text-[20px]">assignment</span><span>Records & Tickets</span></a></nav></div><div class="p-space-md border-t border-outline-variant flex flex-col gap-space-xs"><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors font-label-md text-label-md" href="#"><span>Academic Regulations</span><span class="material-symbols-outlined text-[16px]">open_in_new</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-secondary hover:text-error hover:bg-surface-container-low transition-colors font-label-md text-label-md" data-path="doorway" href="#"><span class="material-symbols-outlined text-[18px]">logout</span><span>Sign Out</span></a></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-md border-b border-outline-variant z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><img alt="University Portal Emblem" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XMygc5MoBT9L17w0e6BpWEWwBNuvhiy_bOIIfaKiXpEG34hurkXLkp-1_rFnTJ6t0IRdwZtyKSmm-BsANkg73e_uXyAor6WxRSSBbItwrWbLoqE2hafkjnYjIufJp3czg6UpqQ-foE131nvYLMqKYWpXtirNVrB13EYYtmDJsbHxVLKl-B3DP2yHBhQgu5xPyfkackjgFvUPN8xoLIUnckpJLpehhixOhyAjt5LFJ8iM0nWaZKuaNtWGM"/><span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Student Operational Workstation</span></div><div class="flex items-center gap-space-md"><div class="hidden sm:flex items-center gap-space-xs px-2.5 py-1 rounded-full bg-surface-container border border-outline-variant"><span class="w-2 h-2 rounded-full bg-emerald-600"></span><span class="font-label-sm text-label-sm text-secondary font-medium">API Gateway Connected • 14ms latency</span></div><div class="flex items-center gap-space-xs px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md"><span class="material-symbols-outlined text-[18px] text-secondary">calendar_today</span><span>Fall 2024 Semester</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCijZeXfgosy-_Y1cagziKpy_zD-InGaynvchD03XBRhW6vYqGpHUlyheoat3ZqCWyMuU8iL6vqBYtqBi-JrD8EwNG5dnBHqpPOVbZ8XiN9rEhFF3V6MQ2XH8wyJk_5GRUiV9r1v6zgle3nqj2nfk33YsOBxmnEH4WC3GlaTCI2GNoWoX2tN23k6TLVn5zitUuwmTXQ4cjddNtgtUwZxCBY82Kt1Zukop6EBU00EugSKHaTVSFrpbOiJg"/></div></header><main class="relative pt-16 min-h-screen bg-surface"><div class="flex flex-col w-full">
+<div class="px-gutter py-space-lg flex flex-col gap-space-lg max-w-[1440px] mx-auto w-full">
+<!-- Section A: Student Identity Bar -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md sm:p-space-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-md shadow-sm">
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-space-md">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Close up architectural portrait of female university computer science student Elena Vance in modern glass laboratory, institutional soft morning lighting, deep navy tones and clean background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLQp2SnGnC7hvtEaQGWIHLT-hkiow5oKDzt7D-7FY1KI-zgJrPt_HJ_2jzRYU9PTLyrJzUC2olRq_YbCzNEvaJ_36C8KV5OTtuTLmFy12wNcw62OloIC3qCR6L38CTUJnUSwKwOUpyerwa9B18eBWXBnzWVsoPA526LdI95oexwGxUuwKmjHym_h3PC6Z7QnC328rgdfOyGqz6__5v5UpHnWRotUGXnSurpNGpY4b-DGQ-q3tgcjArAA"/>
+<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-600 ring-2 ring-surface-container-lowest"></span>
+</div>
+<div class="flex flex-col gap-0.5">
+<div class="flex flex-wrap items-center gap-space-sm">
+<span class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Elena Vance</span>
+<span class="font-data-mono text-data-mono text-secondary px-2 py-0.5 rounded bg-surface-container-high">STU-2024-8841</span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              Enrolled / Good Standing
+            </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-secondary mt-0.5">
+<span class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">school</span>
+              B.S. Computer Science & AI
+            </span>
+<span class="text-outline-variant">•</span>
+<span>Cohort 2024 (Semester 3)</span>
+<span class="text-outline-variant">•</span>
+<span class="font-data-mono text-data-mono text-xs">Cumulative GPA: 3.88</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm w-full lg:w-auto pt-space-xs lg:pt-0 justify-end">
+<button class="inline-flex items-center gap-space-xs px-3.5 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px] text-secondary">history</span>
+          Audit Log
+        </button>
+<button class="inline-flex items-center gap-space-xs px-4 py-2 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low text-on-surface font-label-md text-label-md transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px] text-primary">file_download</span>
+          Download Term Statement
+        </button>
+</div>
+</div>
+<!-- Section D: Fast Academic Policy Context -->
+<div class="bg-surface-container-low rounded-lg p-space-md flex items-start gap-space-md shadow-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0 text-primary">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm w-full">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Instalment Schedule Notice</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            Fall 2024 instalment plan active. Minimum dues payment of <span class="font-data-mono text-data-mono font-semibold text-on-surface">$1,225.00</span> required before <span class="font-medium text-on-surface">Oct 15</span> to avoid enrollment holds (Policy Sec 3.1).
+          </p>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<span class="font-data-mono text-data-mono text-xs text-secondary bg-surface-container-lowest px-2.5 py-1 rounded">Next Check: 14 Days</span>
+</div>
+</div>
+</div>
+<!-- Section B: Key Metric Glance -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Panel 1: Tuition Fee Balance -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg flex flex-col justify-between shadow-sm relative overflow-hidden">
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Tuition Fee Balance</span>
+<span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-label-sm text-label-sm font-medium">
+              Pending Partial Payment
+            </span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface tracking-tight font-semibold tabular-nums">$2,450.00</span>
+<span class="font-body-sm text-body-sm text-secondary">USD</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-amber-700">schedule</span>
+            Due by October 15, 2024
+          </p>
+<div class="w-full bg-surface-container-high rounded-full h-1.5 mt-2 overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 59.1%;"></div>
+</div>
+<div class="flex justify-between font-label-sm text-label-sm text-secondary pt-0.5">
+<span>Paid: $3,550.00</span>
+<span>Total: $6,000.00</span>
+</div>
+</div>
+<div class="pt-space-md mt-space-md flex items-center gap-space-sm bg-surface-container-lowest">
+<button class="flex-1 py-2 px-3 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md text-center transition-colors shadow-sm" type="button">
+            Pay Online
+          </button>
+<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md inline-flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">smart_toy</span>
+            Ask Assistant
+          </button>
+</div>
+</div>
+<!-- Panel 2: Scholarship Coverage -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg flex flex-col justify-between shadow-sm relative overflow-hidden">
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Scholarship Coverage</span>
+<span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-label-sm text-label-sm font-medium">
+              Disbursed • Verified
+            </span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface tracking-tight font-semibold tabular-nums">$4,000.00</span>
+<span class="font-body-sm text-body-sm text-secondary">/ yr</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-emerald-700">verified</span>
+            Dean’s STEM Merit Fellowship
+          </p>
+<!-- Fellowship visual progress bar -->
+<div class="w-full bg-surface-container-high rounded-full h-1.5 mt-2 overflow-hidden">
+<div class="bg-emerald-600 h-full rounded-full" style="width: 100%;"></div>
+</div>
+<div class="flex justify-between font-label-sm text-label-sm text-secondary pt-0.5">
+<span>50% Tuition Waiver Applied</span>
+<span>Renewable 2025</span>
+</div>
+</div>
+<div class="pt-space-md mt-space-md flex items-center justify-between bg-surface-container-lowest">
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono text-xs text-secondary">Award ID: SCH-STEM-994</span>
+</div>
+<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md inline-flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">description</span>
+            Award Letter
+          </button>
+</div>
+</div>
+<!-- Panel 3: Active Inquiries -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg flex flex-col justify-between shadow-sm relative overflow-hidden">
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Active Inquiries</span>
+<span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-label-sm text-label-sm font-medium">
+              Under Review by Bursar
+            </span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface tracking-tight font-semibold tabular-nums">1 Open Ticket</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">confirmation_number</span>
+            Ticket #TK-9021 • Lab fee waiver adjustment
+          </p>
+<div class="bg-surface-container-low p-2.5 rounded-lg mt-2 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary">Estimated resolution</span>
+<span class="font-data-mono text-data-mono text-xs text-on-surface font-semibold">Oct 04, 2024</span>
+</div>
+</div>
+<div class="pt-space-md mt-space-md flex items-center gap-space-sm bg-surface-container-lowest">
+<button class="flex-1 py-2 px-3 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+            View Ticket Thread
+          </button>
+<button class="py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md inline-flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">add</span>
+            New Query
+          </button>
+</div>
+</div>
+</div>
+<!-- Section C: Transparent Fee Ledger -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<div class="px-space-lg py-space-md bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-2.5 h-2.5 rounded-full bg-primary-container"></div>
+<span class="font-headline-sm text-headline-sm text-on-surface">Academic Billing & Fee Ledger</span>
+<span class="font-label-sm text-label-sm text-secondary bg-surface-container px-2 py-0.5 rounded-full">Fall Term 2024</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[18px] text-secondary">search</span>
+<input class="bg-surface-container-low text-on-surface pl-8 pr-3 py-1.5 text-body-sm font-body-sm rounded-lg placeholder-secondary focus:outline-none focus:ring-1 focus:ring-primary-container w-48 sm:w-64" placeholder="Filter ledger records..." type="text"/>
+</div>
+<button class="p-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-secondary transition-colors" title="Export CSV" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+</div>
+<!-- Ledger Table -->
+<div class="overflow-x-auto w-full">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-secondary font-label-sm text-label-sm">
+<th class="py-3 px-space-lg font-medium">Fee Category</th>
+<th class="py-3 px-space-md font-medium text-right">Total Fee</th>
+<th class="py-3 px-space-md font-medium text-right">Paid Amount</th>
+<th class="py-3 px-space-md font-medium text-right">Remaining Dues</th>
+<th class="py-3 px-space-md font-medium">Due Date</th>
+<th class="py-3 px-space-md font-medium">Status</th>
+<th class="py-3 px-space-md font-medium">Receipt / Reference</th>
+<th class="py-3 px-space-lg font-medium text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-high font-body-md text-body-md">
+<!-- Row 1: Fall 2024 Core Tuition -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-space-lg">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Fall 2024 Core Tuition</span>
+<span class="font-body-sm text-body-sm text-secondary">16 Academic Credits (Standard Undergraduate)</span>
+</div>
+</td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $6,000.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $3,550.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono font-semibold text-amber-900 tabular-nums">
+                $2,450.00
+              </td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-secondary text-xs">
+                Oct 15, 2024
+              </td>
+<td class="py-4 px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-label-sm text-label-sm">
+                  Pending
+                </span>
+</td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-xs text-secondary">
+                REC-2024-4410
+              </td>
+<td class="py-4 px-space-lg text-right">
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary-container font-label-md text-label-md transition-colors whitespace-nowrap" type="button">
+<span class="material-symbols-outlined text-[16px]">smart_toy</span>
+                  Ask Assistant
+                </button>
+</td>
+</tr>
+<!-- Row 2: STEM Computational Lab Facility Fee -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-space-lg">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">STEM Computational Lab Facility Fee</span>
+<span class="font-body-sm text-body-sm text-secondary">High-Performance GPU Cluster Allocation</span>
+</div>
+</td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $450.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $450.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-secondary tabular-nums">
+                $0.00
+              </td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-secondary text-xs">
+                Aug 28, 2024
+              </td>
+<td class="py-4 px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-label-sm text-label-sm">
+                  Paid in Full
+                </span>
+</td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-xs text-secondary">
+                REC-2024-1902
+              </td>
+<td class="py-4 px-space-lg text-right">
+<button class="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-md text-label-md font-medium transition-colors" type="button">
+<span>View Receipt</span>
+<span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Student Health & Wellness Levy -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-space-lg">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Student Health & Wellness Levy</span>
+<span class="font-body-sm text-body-sm text-secondary">Comprehensive Primary Care & Mental Health</span>
+</div>
+</td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $220.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $220.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-secondary tabular-nums">
+                $0.00
+              </td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-secondary text-xs">
+                Aug 28, 2024
+              </td>
+<td class="py-4 px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-label-sm text-label-sm">
+                  Paid in Full
+                </span>
+</td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-xs text-secondary">
+                REC-2024-1184
+              </td>
+<td class="py-4 px-space-lg text-right">
+<button class="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-md text-label-md font-medium transition-colors" type="button">
+<span>View Receipt</span>
+<span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Campus Library & Resource Access -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-4 px-space-lg">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Campus Library & Resource Access</span>
+<span class="font-body-sm text-body-sm text-secondary">Digital Journal Subscriptions & Interlibrary Loan</span>
+</div>
+</td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $180.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-on-surface tabular-nums">
+                $180.00
+              </td>
+<td class="py-4 px-space-md text-right font-data-mono text-data-mono text-secondary tabular-nums">
+                $0.00
+              </td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-secondary text-xs">
+                Aug 28, 2024
+              </td>
+<td class="py-4 px-space-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-label-sm text-label-sm">
+                  Paid in Full
+                </span>
+</td>
+<td class="py-4 px-space-md font-data-mono text-data-mono text-xs text-secondary">
+                REC-2024-0982
+              </td>
+<td class="py-4 px-space-lg text-right">
+<button class="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-md text-label-md font-medium transition-colors" type="button">
+<span>View Receipt</span>
+<span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Ledger Summary Footer -->
+<div class="p-space-lg bg-surface-container-low flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md text-secondary font-body-sm text-body-sm">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-emerald-700">lock</span>
+            Encrypted Transaction Ledger
+          </span>
+<span class="text-outline-variant">•</span>
+<span>Bursar Cleared: 3 of 4 line items</span>
+</div>
+<div class="flex items-center gap-space-lg self-end md:self-center">
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-secondary">Net Term Obligation</span>
+<span class="font-headline-sm text-headline-sm text-on-surface tabular-nums font-semibold">$6,850.00</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-secondary">Current Balance Due</span>
+<span class="font-headline-sm text-headline-sm text-amber-900 tabular-nums font-semibold">$2,450.00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Supplementary Context: Term Milestones & Administrative Schedule -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-md mb-space-xl">
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-headline-sm text-headline-sm text-on-surface">Term Milestones</span>
+<span class="font-label-sm text-label-sm text-secondary">Fall 2024</span>
+</div>
+<div class="flex flex-col gap-space-sm mt-space-md">
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Add/Drop Deadline</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-secondary">Passed (Sept 12)</span>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-amber-600"></span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Midterm Examination Window</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-on-surface font-medium">Oct 21 – Oct 29</span>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Final Course Withdrawal</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-secondary">Nov 15, 2024</span>
+</div>
+</div>
+</div>
+<div class="pt-space-md mt-space-md flex items-center justify-between font-label-sm text-label-sm text-secondary">
+<span>Official Registrar Calendar Sync</span>
+<a class="text-primary hover:underline inline-flex items-center gap-0.5" href="#">
+            Full Schedule <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-headline-sm text-headline-sm text-on-surface">Support & Advisory Channel</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-secondary font-label-sm text-label-sm">Live Response</span>
+</div>
+<div class="flex items-start gap-space-md mt-space-md p-space-md rounded-lg bg-surface-container-low">
+<img class="w-10 h-10 rounded-full object-cover shrink-0" data-alt="Official photographic corporate headshot of senior academic advisor Dr Marcus Vance wearing formal grey suit, clean corporate background, crisp studio portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOLVM0sLjTmyYSBTZGWZZRG3r9hYktZcFNhHr-18saH72t0_EaIyJ6ZWirnTdAmOa7K1_VFoVM7kp4UpOLkj7o-qlwEDpp9jD6Nn5sIzNmBgWhby2jU2YYWt7y0bzI4sFY2itRxE4IJBgyOFZJZFDPr6BO4tHiu8l0OKKlcRbjMdjZ_ffh3gGMPcvVV8_vAT9dLGEvMxrqVsEqJM6SfqqVORjb0i4r28wAtOuxTTXj8vXQQUSs6UZDkA"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Dr. Marcus Vance</span>
+<span class="font-body-sm text-body-sm text-secondary">Faculty Advisor • CS & Applied Mathematics</span>
+<span class="font-data-mono text-data-mono text-xs text-primary mt-1">Office Hours: Wed & Fri 14:00 - 16:30</span>
+</div>
+</div>
+</div>
+<div class="pt-space-md mt-space-md flex items-center gap-space-sm">
+<button class="flex-1 py-2 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+            Book Academic Advising
+          </button>
+<button class="py-2 px-3 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-md text-label-md inline-flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">send</span>
+            Direct Message
+          </button>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

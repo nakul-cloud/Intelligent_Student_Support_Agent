@@ -12,6 +12,8 @@ from app.config.database import get_db
 from app.controllers.student_controller import StudentController
 from app.middlewares.auth import get_current_student
 
+from app.schemas.student_schema import UpdateProfileRequest
+
 router = APIRouter(prefix="/student", tags=["Student Records"])
 
 
@@ -26,6 +28,25 @@ async def get_profile(
 ):
     """Retrieve profile and programme details for the authenticated student."""
     return await StudentController.get_profile(student_id=student_id, session=session)
+
+
+@router.put(
+    "/profile",
+    summary="Update authenticated student contact profile",
+    status_code=status.HTTP_200_OK,
+)
+async def update_profile(
+    request: UpdateProfileRequest,
+    student_id: str = Depends(get_current_student),
+    session: AsyncSession = Depends(get_db),
+):
+    """Update contact information (phone, email, address) directly in university records."""
+    return await StudentController.update_profile(
+        student_id=student_id,
+        request=request,
+        session=session,
+    )
+
 
 
 @router.get(

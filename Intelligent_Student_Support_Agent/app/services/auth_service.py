@@ -23,22 +23,7 @@ from app.models.auth_credentials import AuthCredentials
 from app.models.student_records import Student
 from app.schemas.auth_schema import LoginRequest, SignupRequest, TokenResponse
 from app.utils.logger import logger
-
-
-def hash_password(password: str) -> str:
-    """Hashes a plaintext password using bcrypt with salt."""
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Safely verifies a candidate plaintext password against its bcrypt hash."""
-    try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
-        )
-    except Exception as exc:
-        logger.warning(f"Password verification encountered an error: {exc}")
-        return False
+from app.utils.security import hash_password, verify_password
 
 
 def create_access_token(
@@ -99,7 +84,8 @@ class AuthService:
         student = res_stu.scalar_one_or_none()
         if not student:
             raise ResourceNotFoundError(
-                f"Student ID '{request.student_id}' is not enrolled in the university records. Registration prohibited."
+                f"Student ID '{request.student_id}' is not enrolled in the university records. "
+                "Registration requires an enrolled Student ID (STU001 through STU020)."
             )
 
         # 2. Prevent duplicate account creation
@@ -155,3 +141,28 @@ class AuthService:
             token_type="bearer",
             expires_in=expires_in,
         )
+
+    async def change_password(self, student_id: str, new_password: str) -> Dict[str, Any]:
+        """Updates student password directly in the database."""
+        clean_pass = (new_password or "").strip()
+        if len(clean_pass) < 6:
+            raise AuthenticationError("Password must be at least 6 characters long.")
+
+        hashed = hash_password(clean_pass)
+        res_auth = await self.session.execute(
+            select(AuthCredentials).where(AuthCredentials.student_id == student_id)
+        )
+        credentials = res_auth.scalar_one_or_none()
+        if not credentials:
+            credentials = AuthCredentials(student_id=student_id, hashed_password=hashed)
+            self.session.add(credentials)
+        else:
+            credentials.hashed_password = hashed
+
+        await self.session.commit()
+        logger.info(f"AuthService: Password updated in database for student: {student_id}")
+        return {
+            "student_id": student_id,
+            "message": "Password updated successfully in database.",
+        }
+

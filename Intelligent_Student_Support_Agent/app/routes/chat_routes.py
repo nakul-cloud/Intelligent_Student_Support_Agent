@@ -67,3 +67,22 @@ async def get_conversation_messages(
         conversation_id=conversation_id,
         session=session,
     )
+
+
+@router.delete(
+    "/conversations/{conversation_id}",
+    summary="Delete conversation session",
+    status_code=status.HTTP_200_OK,
+)
+async def delete_conversation(
+    conversation_id: UUID,
+    student_id: str = Depends(get_current_student),
+    session: AsyncSession = Depends(get_db),
+):
+    """Deletes a conversation session and all its messages."""
+    return await ChatController.delete_conversation(
+        student_id=student_id,
+        conversation_id=conversation_id,
+        session=session,
+    )
+

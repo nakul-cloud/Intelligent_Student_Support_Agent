@@ -16,4 +16,11 @@ api_router.include_router(student_router)
 api_router.include_router(audit_router)
 api_router.include_router(ingestion_router)
 
+
+@api_router.get("/health", tags=["Health"])
+async def api_health():
+    """API v1 health status endpoint."""
+    return {"status": "ok", "service": "api_v1"}
+
+
 __all__ = ["api_router"]

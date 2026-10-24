@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Emil Kowalski custom easing curves (easing.dev / Apple curves) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  * {
+    border-color: #E2E8F0;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Geist', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #F8FAFC;
+    color: #09090B;
+    font-family: 'Geist', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    letter-spacing: -0.022em;
+    font-weight: 600;
+    color: #09090B;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: #EEF2FF;
+    color: #4338CA;
+  }
+
+  /* Responsive press feedback on all interactive elements */
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a:not([aria-disabled="true"]) {
+    transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+    transition-duration: 160ms;
+    transition-timing-function: var(--ease-out);
+  }
+
+  button:active:not(:disabled), [role="button"]:active:not([aria-disabled="true"]) {
+    transform: scale(0.97);
+  }
+}
+
+/* Natural entrance animations (Never from scale(0)) */
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes bubble-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.99) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes card-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-modal {
+  animation: modal-enter 220ms var(--ease-out) forwards;
+  transform-origin: center;
+}
+
+.animate-bubble {
+  animation: bubble-enter 180ms var(--ease-out) forwards;
+}
+
+.animate-card-1 {
+  animation: card-fade-up 240ms var(--ease-out) 0ms forwards;
+}
+
+.animate-card-2 {
+  animation: card-fade-up 240ms var(--ease-out) 40ms forwards;
+}
+
+.animate-card-3 {
+  animation: card-fade-up 240ms var(--ease-out) 80ms forwards;
+}
+
+/* Fast spinner for superior perceived performance (0.65s vs 1s) */
+@keyframes fast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fast-spin {
+  animation: fast-spin 0.65s linear infinite;
+}
+
+/* Touch device protection for hovers */
+@media (hover: hover) and (pointer: fine) {
+  .hover-subtle:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* Accessibility: prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Tabular numbers for clean financial alignments */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle, sleek scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Clean accessible focus indicators */
+:focus-visible {
+  outline: 2px solid #4F46E5;
+  outline-offset: 2px;
+}
+
+/* Markdown prose table styling for AI Assistant */
+.prose-chat table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 12px 0;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.prose-chat th {
+  background-color: #F8FAFC;
+  color: #09090B;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.prose-chat td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #334155;
+}
+
+.prose-chat tr:last-child td {
+  border-bottom: none;
+}
+
+.prose-chat tr:nth-child(even) td {
+  background-color: #FAFAFC;
+}
+
+.prose-chat ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 8px 0;
+}
+
+.prose-chat ul li {
+  position: relative;
+  padding-left: 18px;
+  margin: 4px 0;
+}
+
+.prose-chat ul li::before {
+  content: "•";
+  position: absolute;
+  left: 4px;
+  color: #4F46E5;
+  font-weight: bold;
+}

@@ -40,7 +40,55 @@ class StudentService:
             programme=student.programme,
             batch=student.batch,
             status=student.status,
+            phone=getattr(student, "phone", None),
+            email=getattr(student, "email", None),
+            address=getattr(student, "address", None),
         )
+
+    async def update_profile(
+        self,
+        student_id: str,
+        phone: Optional[str] = None,
+        email: Optional[str] = None,
+        address: Optional[str] = None,
+    ) -> StudentProfileResponse:
+        """Updates phone, email, or address for the student."""
+        stmt = select(Student).where(Student.student_id == student_id)
+        res = await self.session.execute(stmt)
+        student = res.scalar_one_or_none()
+        if not student:
+            raise ResourceNotFoundError(f"Student profile '{student_id}' not found.")
+
+        if phone is not None:
+            student.phone = phone.strip()
+        if email is not None:
+            student.email = email.strip()
+        if address is not None:
+            student.address = address.strip()
+
+        await self.session.commit()
+        await self.session.refresh(student)
+
+        from app.services.audit_service import log_audit_event
+        await log_audit_event(
+            student_id=student_id,
+            action="profile_update",
+            target_id=student_id,
+            decision="ALLOWED",
+            result=f"Updated profile: phone={phone}, email={email}, address={address}",
+        )
+
+        return StudentProfileResponse(
+            student_id=student.student_id,
+            name=student.name,
+            programme=student.programme,
+            batch=student.batch,
+            status=student.status,
+            phone=student.phone,
+            email=student.email,
+            address=student.address,
+        )
+
 
     async def get_fees(self, student_id: str) -> FeeSummaryResponse:
         """Retrieves tuition fee ledger for the student."""

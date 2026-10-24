@@ -17,6 +17,18 @@ class StudentProfileResponse(BaseModel):
     programme: str
     batch: str
     status: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+
+
+class UpdateProfileRequest(BaseModel):
+    """Payload for updating student contact details."""
+
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+
 
 
 class FeeSummaryResponse(BaseModel):

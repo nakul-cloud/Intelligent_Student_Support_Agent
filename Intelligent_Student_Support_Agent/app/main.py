@@ -17,14 +17,10 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for application startup and shutdown events."""
     logger.info(f"Starting Intelligent Student Support Agent ({settings.app_env})...")
 
-    # 1. Verify PostgreSQL connection
-    try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        logger.info("PostgreSQL connection verified successfully.")
-    except Exception as exc:
-        logger.critical(f"PostgreSQL connection failed: {exc}")
-        raise
+    # 1. Verify and initialize PostgreSQL Database
+    from app.config.database import check_and_initialize_database
+    db_type = await check_and_initialize_database()
+    logger.info(f"Database operational backend: {db_type}")
 
     # 2. Verify Redis connection
     if await ping_redis():

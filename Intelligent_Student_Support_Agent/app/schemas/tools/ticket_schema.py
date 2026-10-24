@@ -43,3 +43,52 @@ TICKET_TOOL_SCHEMA: dict[str, Any] = {
         },
     },
 }
+
+GET_TICKET_STATUS_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "get_ticket_status",
+        "description": (
+            "Lookup and check the current status, resolution progress, and details of an existing "
+            "support ticket using its reference ID (e.g., 'TICK-96628'). Invoke this whenever "
+            "a student asks about the update, status, or details of a specific ticket."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "ticket_id": {
+                    "type": "string",
+                    "description": "The ticket tracking reference ID (e.g. 'TICK-96628').",
+                },
+                "student_id": {
+                    "type": "string",
+                    "description": "The unique student ID owning the ticket (e.g., 'STU001').",
+                },
+            },
+            "required": ["ticket_id"],
+        },
+    },
+}
+
+LIST_STUDENT_TICKETS_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "list_student_tickets",
+        "description": (
+            "Retrieve and list all support tickets previously filed by the authenticated student. "
+            "Invoke this when a student asks to see all their tickets, open grievances, or check "
+            "tickets without knowing their exact ticket ID."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "student_id": {
+                    "type": "string",
+                    "description": "The unique student ID whose tickets should be retrieved (e.g., 'STU001').",
+                },
+            },
+            "required": ["student_id"],
+        },
+    },
+}
+

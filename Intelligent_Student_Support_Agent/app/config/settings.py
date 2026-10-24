@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # --- Vector Database (Qdrant) ---
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection_name: str = "student_handbook"
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.45
     top_k_chunks: int = 3
 
     # --- Dynamic RAG Chunking Configuration ---

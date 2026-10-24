@@ -1,5 +1,5 @@
 # ==============================================================================
-# Git Ignore - Intelligent Student Support Agent & Workspace Root
+# Git Ignore - Intelligent Student Support Agent (Full-Stack Workspace)
 # ==============================================================================
 
 # --- Environment & Secret Keys ---
@@ -17,7 +17,7 @@ env/
 ENV/
 .env/
 
-# --- Python Bytecode & Cache ---
+# --- Python Bytecode & Build Artifacts ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -50,23 +50,48 @@ htmlcov/
 .ruff_cache/
 .hypothesis/
 
-# --- Observability & Runtime Logs ---
+# --- Frontend Node & Package Managers ---
+node_modules/
+**/node_modules/
+Frontend/**/node_modules/
+dist/
+**/dist/
+Frontend/**/dist/
+dist-ssr/
+**/dist-ssr/
+Frontend/**/dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.local
+.eslintcache
+.stylelintcache
+.turbo/
+
+# --- Observability, Logs & Runtime ---
 *.log
 logs/*
 !logs/.gitkeep
 
-# Note: evaluation/results/ and traces/ are intentionally tracked in git as key assignment deliverables.
-# --- Vector & Database Local Data ---
+# --- Database, Vector Stores & Local Storage ---
 postgres_data/
 qdrant_data/
+qdrant_storage/
+**/qdrant_storage/
 *.sqlite
 *.sqlite3
 *.db
 
-# --- HuggingFace & PyTorch Cache ---
+# --- Machine Learning / HuggingFace & PyTorch Cache ---
 .cache/
 huggingface/
 checkpoints/
+
+# --- Agent Metadata & Lockfiles ---
+.agents/
+skills-lock.json
 
 # --- Operating System & Editor Files ---
 .DS_Store
@@ -75,7 +100,14 @@ ehthumbs.db
 desktop.ini
 $RECYCLE.BIN/
 .idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 *.sublime-workspace
 *.sublime-project
 *.swp
 *~
+*.suo
+*.sln
+*.ntvs*
+*.njsproj

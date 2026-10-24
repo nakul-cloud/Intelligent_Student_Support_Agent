@@ -65,3 +65,19 @@ class ChatController:
             message=f"Retrieved {len(messages)} messages.",
             data=[m.model_dump() for m in messages],
         )
+
+    @staticmethod
+    async def delete_conversation(
+        student_id: str,
+        conversation_id: UUID,
+        session: AsyncSession,
+    ):
+        """Deletes a conversation session and all its messages."""
+        service = ChatService(session)
+        await service.delete_conversation(student_id, conversation_id)
+        return success_response(
+            status_code=status.HTTP_200_OK,
+            message="Conversation deleted successfully.",
+            data={"conversation_id": str(conversation_id)},
+        )
+

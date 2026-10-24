@@ -100,3 +100,116 @@ async def create_support_ticket(
     except Exception as exc:
         logger.error(f"TicketTool: Error creating support ticket for '{clean_id}': {exc}")
         return f"Database error while creating support ticket for student '{clean_id}': {str(exc)}"
+
+
+async def get_ticket_status(
+    ticket_id: str,
+    student_id: str,
+) -> str:
+    """Retrieve the current processing status, priority, and updates for an existing support ticket.
+
+    Args:
+        ticket_id: The tracking reference code for the ticket (e.g. 'TICK-96628').
+        student_id: The unique student identification code (e.g. 'STU001').
+
+    Returns:
+        A formatted status report of the ticket from the university database.
+    """
+    clean_ticket = ticket_id.strip().upper()
+    clean_student = student_id.strip().upper()
+    logger.info(f"TicketTool: Querying status of ticket '{clean_ticket}' for student '{clean_student}'...")
+
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = select(SupportTicket).where(
+                SupportTicket.ticket_id == clean_ticket,
+                SupportTicket.student_id == clean_student,
+            )
+            result = await session.execute(stmt)
+            ticket = result.scalar_one_or_none()
+
+            if not ticket:
+                # Security check: verify if the ticket exists for another student
+                other_stmt = select(SupportTicket).where(SupportTicket.ticket_id == clean_ticket)
+                other_res = await session.execute(other_stmt)
+                if other_res.scalar_one_or_none():
+                    logger.warning(
+                        f"TicketTool: Student '{clean_student}' attempted to inspect ticket '{clean_ticket}' owned by another student."
+                    )
+                    return f"Access Denied: Ticket '{clean_ticket}' belongs to another student account."
+                return f"No support ticket found with reference code '{clean_ticket}' under your account."
+
+            created_str = (
+                ticket.created_at.strftime("%b %d, %Y, %H:%M UTC")
+                if ticket.created_at
+                else "Recent"
+            )
+
+            # Audit lookup event
+            from app.services.audit_service import log_audit_event
+            await log_audit_event(
+                student_id=clean_student,
+                action="ticket_status_inquiry",
+                target_id=clean_ticket,
+                decision="ALLOWED",
+                result=f"Ticket {clean_ticket} status: {ticket.status.upper()}",
+            )
+
+            return (
+                f"Support Ticket Status Report:\n"
+                f"- Ticket ID: {ticket.ticket_id}\n"
+                f"- Category: {ticket.category}\n"
+                f"- Priority: {ticket.priority.upper()}\n"
+                f"- Current Status: {ticket.status.upper()}\n"
+                f"- Date Submitted: {created_str}\n"
+                f"- Description: {ticket.description}\n"
+                f"- Current Update: The ticket is actively logged in the university system under status '{ticket.status.upper()}'."
+            )
+
+    except Exception as exc:
+        logger.error(f"TicketTool: Error querying ticket status '{clean_ticket}': {exc}")
+        return f"Database error while querying ticket status: {str(exc)}"
+
+
+async def list_student_tickets(
+    student_id: str,
+) -> str:
+    """Retrieve all support tickets logged by the authenticated student.
+
+    Args:
+        student_id: The unique student identification code (e.g. 'STU001').
+
+    Returns:
+        A formatted list of all open and closed tickets belonging to the student.
+    """
+    clean_student = student_id.strip().upper()
+    logger.info(f"TicketTool: Listing all support tickets for student '{clean_student}'...")
+
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(SupportTicket)
+                .where(SupportTicket.student_id == clean_student)
+                .order_by(SupportTicket.created_at.desc())
+            )
+            result = await session.execute(stmt)
+            tickets = result.scalars().all()
+
+            if not tickets:
+                return f"No support tickets have been filed for student '{clean_student}'."
+
+            lines = [f"Support Tickets on Record for Student {clean_student} ({len(tickets)} total):"]
+            for idx, t in enumerate(tickets[:10], start=1):
+                created_str = t.created_at.strftime("%b %d, %Y") if t.created_at else "Recent"
+                lines.append(
+                    f"{idx}. [{t.ticket_id}] Status: {t.status.upper()} | Priority: {t.priority.upper()} | "
+                    f"Category: {t.category}\n"
+                    f"   Details: {t.description[:80]}... (Submitted: {created_str})"
+                )
+
+            return "\n".join(lines)
+
+    except Exception as exc:
+        logger.error(f"TicketTool: Error listing tickets for '{clean_student}': {exc}")
+        return f"Database error while listing tickets: {str(exc)}"
+

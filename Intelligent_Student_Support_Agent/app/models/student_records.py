@@ -16,6 +16,10 @@ class Student(BaseModel):
     programme: Mapped[str] = mapped_column(String, nullable=False)
     batch: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, default="Enrolled", nullable=False)
+    phone: Mapped[str | None] = mapped_column(String, nullable=True)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    address: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 
 
 class FeeRecord(BaseModel):

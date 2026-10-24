@@ -27,6 +27,23 @@ class StudentController:
         )
 
     @staticmethod
+    async def update_profile(student_id: str, request, session: AsyncSession):
+        """Update profile details of authenticated student."""
+        service = StudentService(session)
+        profile = await service.update_profile(
+            student_id=student_id,
+            phone=request.phone,
+            email=request.email,
+            address=request.address,
+        )
+        return success_response(
+            status_code=status.HTTP_200_OK,
+            message="Student profile updated successfully.",
+            data=profile.model_dump(),
+        )
+
+
+    @staticmethod
     async def get_fees(student_id: str, session: AsyncSession):
         """Fetch tuition fee ledger for authenticated student."""
         service = StudentService(session)
