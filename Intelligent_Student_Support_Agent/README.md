@@ -94,17 +94,22 @@ Intelligent_Student_Support_Agent/
 
 ---
 
-## 👥 Seeded Test Student Personas
+## 👥 Seeded Test Student Personas (Option 2 Architecture)
 
-To test different real-world scenarios, the PostgreSQL database is populated via `just seed` with 5 distinct student records:
+The PostgreSQL database is seeded via `just seed` with **20 comprehensive student records** (`STU001` through `STU020`) containing academic profiles, fee ledgers, scholarship grants, and support tickets:
 
-| Student ID | Name | Programme | Fee Status | Scholarship | Recommended Test Query |
-|---|---|---|---|---|---|
-| **`STU001`** | **Rahul Sharma** | PGDM AI & DS | Partially Paid (₹225k pending, due Oct 31) | 20% Merit Scholarship (Active) | *"What is my remaining fee balance and my scholarship details?"* |
-| **`STU002`** | **Priya Patel** | MBA Marketing | Paid in Full (₹0 balance, RCP-2026-0810) | None | *"Check if I have any pending fee dues."* |
-| **`STU003`** | **Amit Verma** | B.Tech CSE | **Overdue** (₹200k pending since Sept 1) | 15% Sports Scholarship (Active) | *"What happens if my fees are overdue and how much do I owe?"* |
-| **`STU004`** | **Sneha Gupta** | M.Tech Data Science | Unpaid (₹380k pending, due Nov 15) | 25% Research Fellowship (Active) | *"Can I raise a ticket regarding fee installment extensions?"* |
-| **`STU005`** | **Vikram Singh** | BBA | Paid in Full (₹0 balance, RCP-2026-0720) | None | *"What are the library timings and borrowing rules?"* |
+- **Pre-Configured Instant Login (`STU001` – `STU005`)**: Credentials pre-initialized with password `Student@123` for instant testing and demonstration.
+- **Available Registration Roster (`STU006` – `STU020`)**: Enrolled university records exist in PostgreSQL, ready to be claimed by users via `/signup`.
+
+| Student ID | Name | Programme | Fee Status | Scholarship | Account State | Recommended Test Query / Action |
+|---|---|---|---|---|:---:|---|
+| **`STU001`** | **Rahul Sharma** | PGDM AI & DS | Partially Paid (₹225k pending, due Oct 31) | 20% Merit (Active) | Pre-Activated | *"What is my remaining fee balance and my scholarship details?"* |
+| **`STU002`** | **Priya Patel** | MBA Marketing | Paid in Full (₹0 balance, RCP-2026-0810) | None | Pre-Activated | *"Check if I have any pending fee dues."* |
+| **`STU003`** | **Amit Verma** | B.Tech CSE | **Overdue** (₹200k pending since Sept 1) | 15% Sports (Active) | Pre-Activated | *"What happens if my fees are overdue and how much do I owe?"* |
+| **`STU004`** | **Sneha Gupta** | M.Tech Data Science | Unpaid (₹380k pending, due Nov 15) | 25% Research (Active) | Pre-Activated | *"Can I raise a ticket regarding fee installment extensions?"* |
+| **`STU005`** | **Vikram Singh** | BBA | Paid in Full (₹0 balance, RCP-2026-0720) | None | Pre-Activated | *"What are the library timings and borrowing rules?"* |
+| **`STU006`** | **Ananya Iyer** | B.Tech AI & ML | Partially Paid (₹210k pending, due Nov 30) | 30% Women in Tech | Available | Test `/signup` with password `Password@123`, then view dashboard. |
+| **`STU007`–`STU020`** | *Enrolled Cohort* | Diverse UG/PG | Mixed (Paid, Overdue, Pending) | Merit & Need-based | Available | Self-registration testing across different degree programmes. |
 
 ---
 
@@ -136,39 +141,64 @@ The agent implements a privacy-first, dual-tier memory system:
 ## 🛡️ Enterprise Security & Guardrail Architecture
 
 The agent implements a defense-in-depth security model:
-1. **JWT Authentication & Passwords**: Passwords hashed using PBKDF2 with SHA-256 (310,000 rounds). Token verification via `get_current_student` dependency.
+1. **JWT Authentication & Passwords**: Passwords hashed using bcrypt. Stateless JWT verification via FastAPI `get_current_student` dependency.
 2. **Code-Level Ownership Enforcement**: Enforced directly inside tool functions (`app/utils/ownership.py`). Regardless of what the student prompt says, an authenticated caller `STU001` cannot read or query data belonging to `STU002`.
 3. **Approval Gate for Sensitive Actions**: Human-in-the-loop confirmation required before modifying student records or submitting grievance/appeal tickets.
 4. **Immutable Audit Trails**: Every tool invocation and access decision (`ALLOWED`, `BLOCKED`, `APPROVED`, `REJECTED`) is recorded synchronously in PostgreSQL table `audit_logs`.
 
 ---
 
-## 🌐 API Endpoint Contracts
+## 🌐 API Endpoint Contracts & Live Verification
 
-### 1. Authentication
-- `POST /api/v1/auth/signup` — Enrolled student self-service credential creation.
-- `POST /api/v1/auth/login` — Authenticates credentials and returns JWT bearer token.
+### 1. Authentication (`/api/v1/auth`)
+- **`POST /api/v1/auth/signup`** — Enrolled student self-service credential creation (Option 2).
+  - *Request Body*: `{"student_id": "STU006", "password": "Password@123"}`
+  - *Validation*: Requires student to exist in university PostgreSQL `students` table. Rejects non-enrolled IDs (`404`) and duplicate accounts (`409`).
+  - *Response (`201 Created`)*: `{"status": "success", "message": "Student account registered successfully.", "data": {"student_id": "STU006"}}`
+- **`POST /api/v1/auth/login`** — Authenticates student credentials and returns a Bearer JWT token.
+  - *Request Body*: `{"student_id": "STU006", "password": "Password@123"}`
+  - *Response (`200 OK`)*: `{"status": "success", "data": {"access_token": "<JWT>", "token_type": "bearer", "expires_in": 86400}}`
 
-### 2. Conversational Agent
-- `POST /api/v1/chat` — Multi-turn agent turn execution with tool calling and two-tier memory context.
-- `GET /api/v1/chat/conversations` — Lists conversation sessions owned by the authenticated student.
-- `GET /api/v1/chat/conversations/{id}/messages` — Retrieves turn history for a conversation.
+### 2. Student Academic Records (`/api/v1/student`, Protected via Bearer JWT)
+- **`GET /api/v1/student/profile`** — Authenticated student profile (name, programme, batch, status, contact).
+- **`GET /api/v1/student/fees`** — Tuition and fee ledger breakdown (total fee, paid, pending, due date, receipt).
+- **`GET /api/v1/student/scholarship`** — Active scholarship awards, percentage, and grant amount.
+- **`GET /api/v1/student/tickets`** — Support and grievance tickets logged by the authenticated student.
+- **`PUT /api/v1/student/profile`** — Update student contact information (phone, email, address) directly in PostgreSQL.
 
-### 3. Student Academic Records (Protected via JWT)
-- `GET /api/v1/student/profile` — Authenticated student profile (program, batch, status, CGPA).
-- `GET /api/v1/student/fees` — Tuition, hostel, and library fee ledger breakdown.
-- `GET /api/v1/student/scholarship` — Active scholarship awards and grant dates.
-- `GET /api/v1/student/tickets` — Support tickets opened by the student.
+### 3. Conversational Agent (`/api/v1/chat`, Protected via Bearer JWT)
+- **`POST /api/v1/chat`** — Multi-turn agent execution with semantic RAG tool-calling and two-tier memory.
+- **`GET /api/v1/chat/conversations`** — Lists conversation sessions owned by the authenticated student.
+- **`GET /api/v1/chat/conversations/{id}/messages`** — Retrieves turn history for a conversation.
 
-### 4. Audit & Compliance
-- `GET /api/v1/audit/logs?limit=50` — Recent security event log stream.
-- `GET /api/v1/audit/summary` — Aggregated counts for Allowed, Blocked, and Approved actions.
+### 4. Audit & Compliance (`/api/v1/audit`)
+- **`GET /api/v1/audit/logs?limit=50`** — Recent security event log stream.
+- **`GET /api/v1/audit/summary`** — Aggregated counts for Allowed, Blocked, and Approved actions.
 
-### 5. Document Ingestion
-- `POST /api/v1/ingest/upload` — Multipart form PDF upload, chunking, local embedding, and Qdrant upsert.
+### 5. Document Ingestion (`/api/v1/ingest`)
+- **`POST /api/v1/ingest/upload`** — Multipart form PDF upload, chunking, local embedding, and Qdrant upsert.
 
 ### 6. Service Health Check
-- `GET /health` — Verifies connection to PostgreSQL, Redis, and Qdrant.
+- **`GET /health`** — Verifies connection to PostgreSQL, Redis, and Qdrant (`{"status": "ok"}`).
+
+---
+
+### 📊 Live API Verification Matrix (PostgreSQL Backend)
+
+The table below summarizes live integration test results executed against the running backend with Docker PostgreSQL:
+
+| Endpoint & Method | Test Scenario | HTTP Status | Response Summary | Architectural Invariant Verified |
+|:---|:---|:---:|:---|:---|
+| `POST /api/v1/auth/signup` | Unregistered ID `STU999` | **404 Not Found** | `"Student ID 'STU999' is not enrolled in the university records. Registration requires an enrolled Student ID (STU001 through STU020)."` | **Option 2 Gatekeeper**: Non-enrolled users are prevented from creating rogue accounts. |
+| `POST /api/v1/auth/signup` | Enrolled ID `STU006` | **201 Created** | `"Student account registered successfully."` | **Credential Creation**: Hashes password with bcrypt and records in PostgreSQL `auth_credentials`. |
+| `POST /api/v1/auth/signup` | Duplicate `STU006` | **409 Conflict** | `"An account for student ID 'STU006' already exists. Please log in."` | **Collision Guard**: Idempotently prevents account overwrites. |
+| `POST /api/v1/auth/login` | Login with `STU006` | **200 OK** | Returned valid signed Bearer JWT token | **JWT Lifecycle**: Issues signed token with claim `sub: STU006`. |
+| `GET /api/v1/student/profile` | Bearer Token for `STU006` | **200 OK** | Loaded: Ananya Iyer, B.Tech AI & ML, Batch 2024-28 | **Referential Integrity**: Links JWT subject to PostgreSQL `students` table. |
+| `GET /api/v1/student/fees` | Bearer Token for `STU006` | **200 OK** | Loaded: Total ₹4,20,000, Partially Paid, RCP-2026-0412 | **Ledger Isolation**: Resolves pre-seeded fee ledger for student. |
+| `GET /api/v1/student/scholarship` | Bearer Token for `STU006` | **200 OK** | Loaded: Women in Tech Award (30% / ₹63,000) | **Aid Grant Resolution**: Fetches active award from PostgreSQL `scholarships`. |
+| `GET /api/v1/student/tickets` | Bearer Token for `STU006` | **200 OK** | Retrieved 0 support tickets (clean initial state) | **Tenant Boundary**: Returns only tickets belonging to authenticated student. |
+
+> Detailed audit logs and metrics are documented in [evaluation/results/auth_audit_report.md](file:///d:/Agentic_AI_End_Term_Project/Intelligent_Student_Support_Agent/evaluation/results/auth_audit_report.md).
 
 ---
 
