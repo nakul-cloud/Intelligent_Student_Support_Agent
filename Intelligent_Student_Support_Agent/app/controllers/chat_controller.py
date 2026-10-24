@@ -6,6 +6,7 @@ Adheres strictly to SOLID Principles:
 - Dependency Inversion (DIP): Injects AsyncSession into ChatService.
 """
 
+from typing import Optional
 from uuid import UUID
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession

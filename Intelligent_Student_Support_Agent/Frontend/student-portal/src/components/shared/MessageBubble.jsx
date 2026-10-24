@@ -62,18 +62,55 @@ export default function MessageBubble({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                p: ({ children }) => (
-                  <p className="mb-3.5 last:mb-0 leading-relaxed text-slate-800 text-sm">
+                h1: ({ children }) => (
+                  <h1 className="text-base font-bold text-slate-900 mt-4 mb-2 first:mt-0 tracking-tight">
                     {children}
-                  </p>
+                  </h1>
                 ),
+                h2: ({ children }) => (
+                  <h2 className="text-sm font-bold text-slate-900 mt-3.5 mb-1.5 first:mt-0 tracking-tight">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 mt-3.5 mb-1.5 first:mt-0">
+                    {children}
+                  </h3>
+                ),
+                h4: ({ children }) => (
+                  <h4 className="text-xs font-semibold text-slate-700 mt-2 mb-1 first:mt-0">
+                    {children}
+                  </h4>
+                ),
+                p: ({ children }) => {
+                  const renderWithLineBreaks = (nodes) =>
+                    React.Children.map(nodes, (child) => {
+                      if (typeof child === 'string') {
+                        const parts = child.split(/<br\s*\/?>/gi);
+                        if (parts.length > 1) {
+                          return parts.map((part, idx) => (
+                            <React.Fragment key={idx}>
+                              {idx > 0 && <br />}
+                              {part}
+                            </React.Fragment>
+                          ));
+                        }
+                      }
+                      return child;
+                    });
+                  return (
+                    <p className="mb-3.5 last:mb-0 leading-relaxed text-slate-800 text-sm">
+                      {renderWithLineBreaks(children)}
+                    </p>
+                  );
+                },
                 strong: ({ children }) => (
                   <strong className="font-bold text-slate-900">
                     {children}
                   </strong>
                 ),
                 table: ({ children }) => (
-                  <div className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+                  <div className="my-3.5 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
                     <table className="w-full border-collapse text-left text-xs">
                       {children}
                     </table>
@@ -85,7 +122,7 @@ export default function MessageBubble({
                   </thead>
                 ),
                 th: ({ children }) => (
-                  <th className="px-4 py-2.5 font-bold text-slate-900">
+                  <th className="px-4 py-2.5 font-bold text-slate-900 align-top whitespace-nowrap">
                     {children}
                   </th>
                 ),
@@ -99,32 +136,79 @@ export default function MessageBubble({
                     {children}
                   </tr>
                 ),
-                td: ({ children }) => (
-                  <td className="px-4 py-2.5 text-slate-700 font-medium text-xs">
-                    {children}
-                  </td>
-                ),
+                td: ({ children }) => {
+                  const renderWithLineBreaks = (nodes) =>
+                    React.Children.map(nodes, (child) => {
+                      if (typeof child === 'string') {
+                        const parts = child.split(/<br\s*\/?>/gi);
+                        if (parts.length > 1) {
+                          return parts.map((part, idx) => (
+                            <React.Fragment key={idx}>
+                              {idx > 0 && <br />}
+                              {part}
+                            </React.Fragment>
+                          ));
+                        }
+                      }
+                      return child;
+                    });
+                  return (
+                    <td className="px-4 py-2.5 text-slate-700 font-normal text-xs align-top leading-relaxed">
+                      {renderWithLineBreaks(children)}
+                    </td>
+                  );
+                },
                 ul: ({ children }) => (
                   <ul className="my-3 space-y-2 pl-0 list-none">
                     {children}
                   </ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className="my-3 space-y-2 pl-5 list-decimal text-slate-800">
+                  <ol className="my-3 space-y-2 pl-5 list-decimal text-slate-800 text-sm">
                     {children}
                   </ol>
                 ),
-                li: ({ children }) => (
-                  <li className="flex items-start gap-2.5 text-slate-800 text-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 mt-2 shrink-0" />
-                    <span className="flex-1">{children}</span>
-                  </li>
-                ),
+                li: ({ children, ordered }) => {
+                  const renderWithLineBreaks = (nodes) =>
+                    React.Children.map(nodes, (child) => {
+                      if (typeof child === 'string') {
+                        const parts = child.split(/<br\s*\/?>/gi);
+                        if (parts.length > 1) {
+                          return parts.map((part, idx) => (
+                            <React.Fragment key={idx}>
+                              {idx > 0 && <br />}
+                              {part}
+                            </React.Fragment>
+                          ));
+                        }
+                      }
+                      return child;
+                    });
+                  if (ordered) {
+                    return (
+                      <li className="text-slate-800 text-sm leading-relaxed mb-1.5 last:mb-0">
+                        {renderWithLineBreaks(children)}
+                      </li>
+                    );
+                  }
+                  return (
+                    <li className="flex items-start gap-2.5 text-slate-800 text-sm leading-relaxed mb-1.5 last:mb-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-700 mt-2 shrink-0" />
+                      <span className="flex-1">{renderWithLineBreaks(children)}</span>
+                    </li>
+                  );
+                },
                 code: ({ children }) => (
                   <code className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-xs border border-slate-200">
                     {children}
                   </code>
                 ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-slate-300 pl-3 my-2 text-slate-600 italic text-xs">
+                    {children}
+                  </blockquote>
+                ),
+                hr: () => <hr className="my-4 border-slate-200" />,
               }}
             >
               {content}

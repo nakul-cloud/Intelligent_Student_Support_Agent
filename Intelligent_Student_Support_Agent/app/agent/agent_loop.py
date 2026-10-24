@@ -19,6 +19,7 @@ from typing import Any, Callable, Coroutine
 from app.agent.client import async_groq_client
 from app.config.settings import settings
 from app.providers.llm.factory import LLMFactory
+from app.utils.formatter import format_assistant_response
 from app.utils.logger import logger
 from tracing.tracer import Tracer
 
@@ -240,7 +241,7 @@ async def run_agent(
         final_answer = assistant_message.content or ""
         logger.info(f"AgentLoop: Final answer generated at Turn {turn}.")
         tracer.log_termination(turn=turn, reason="final_answer")
-        return final_answer
+        return format_assistant_response(final_answer)
 
     # 3. Maximum turn limit reached without final termination
     logger.warning(

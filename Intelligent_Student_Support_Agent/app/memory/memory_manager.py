@@ -19,12 +19,14 @@ from app.schemas.memory_schema import ExtractedFact, MemoryContextSchema
 from app.utils.logger import logger
 
 
+_SLOT_LOOKAHEAD = r"(?=[,\.\n\"'?!]|$)"
+
 # Hybrid regex slot patterns for deterministic, zero-token fact extraction
 DEFAULT_SLOT_PATTERNS: List[Tuple[str, re.Pattern]] = [
     (
         "programme",
         re.compile(
-            r"(?:studying|enrolled in|pursuing)\s+([A-Za-z0-9\s&]+?)(?=[,\.\n]|\bin the\b|\bbatch\b|$)",
+            r"(?:studying|enrolled in|pursuing)\s+([A-Za-z0-9\s&/\-_]+?)(?=[,\.\n\"'?!]|\bin the\b|\bbatch\b|$)",
             re.IGNORECASE,
         ),
     ),
@@ -38,21 +40,21 @@ DEFAULT_SLOT_PATTERNS: List[Tuple[str, re.Pattern]] = [
     (
         "preferred_name",
         re.compile(
-            r"(?:call me|my name is)\s+([A-Z][a-z]+)",
+            r"(?:call me|my name is)\s+[\"']?([A-Za-z]+)[\"']?" + _SLOT_LOOKAHEAD,
             re.IGNORECASE,
         ),
     ),
     (
         "academic_goal",
         re.compile(
-            r"(?:interested in|aiming to|want to specialize in|goal is)\s+([A-Za-z0-9\s]+?)(?=[,\.\n]|$)",
+            r"(?:interested in|aiming to|want to specialize in|goal is)\s+([A-Za-z0-9\s&/\-_]+?)" + _SLOT_LOOKAHEAD,
             re.IGNORECASE,
         ),
     ),
     (
         "known_issue",
         re.compile(
-            r"(?:issue with|problem with|facing problem in)\s+([A-Za-z0-9\s]+?)(?=[,\.\n]|$)",
+            r"(?:issue with|problem with|facing problem in|trouble with|having an issue with)\s+([A-Za-z0-9\s&/\-_]+?)" + _SLOT_LOOKAHEAD,
             re.IGNORECASE,
         ),
     ),
@@ -103,10 +105,19 @@ class MemoryManager:
         extracted: List[ExtractedFact] = []
         seen_keys = set()
 
+        # Normalize smart quotes and strip whitespace
+        normalized_text = (
+            (conversation_text or "")
+            .replace("“", '"')
+            .replace("”", '"')
+            .replace("‘", "'")
+            .replace("’", "'")
+        )
+
         for slot_key, pattern in self.slot_patterns:
-            match = pattern.search(conversation_text)
+            match = pattern.search(normalized_text)
             if match and slot_key not in seen_keys:
-                value = match.group(1).strip()
+                value = match.group(1).strip().strip("\"'.,!? ")
                 # Filter out single-letter or invalid captures
                 if len(value) >= 2 and len(value) <= 100:
                     extracted.append(ExtractedFact(fact_key=slot_key, fact_value=value))

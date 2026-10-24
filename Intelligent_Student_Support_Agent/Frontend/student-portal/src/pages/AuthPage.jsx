@@ -61,7 +61,9 @@ export default function AuthPage() {
       const msg =
         err.response?.data?.message ||
         err.response?.data?.detail ||
-        'Incorrect Student ID or password. Please verify your credentials.';
+        (err.code === 'ERR_NETWORK' || !err.response
+          ? 'Cannot connect to backend server. Please make sure backend is running on port 8000.'
+          : 'Incorrect Student ID or password. Please verify your credentials.');
       setErrorMessage(msg);
     } finally {
       setLoading(false);
