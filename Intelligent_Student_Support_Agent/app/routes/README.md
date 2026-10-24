@@ -30,55 +30,18 @@ The `app/routes` layer serves as the declarative HTTP gateway. Every incoming re
 
 ### Request Execution Pipeline
 
-```
-                                [ Client Inbound Request ]
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 1. OWASP Security Headers Middleware (app/middlewares/security_headers.py)              │
-│    - Extracts or generates UUIDv4 'X-Request-ID' correlation token                     │
-│    - Enforces: X-Content-Type-Options: nosniff | X-Frame-Options: DENY                 │
-│    - Enforces: Referrer-Policy: strict-origin-when-cross-origin | X-XSS-Protection: 1 │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 2. CORS Restriction Middleware (app/main.py)                                           │
-│    - Whitelisted frontend origins only (http://localhost:3000, http://localhost:5173) │
-│    - Explicitly blocks '*' wildcard origins                                            │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 3. Sliding-Window Rate Limiter (app/middlewares/rate_limiter.py)                      │
-│    - Redis-backed atomic sliding window with automatic in-memory fallback              │
-│    - /api/v1/chat: 30 requests / minute | /api/v1/auth/login: 20 requests / minute      │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 4. Identity & Authentication Guard (app/middlewares/auth.py)                          │
-│    - Extracts Bearer JWT from Authorization header                                     │
-│    - Validates HS256 signature, 24-hour expiration, and extracts 'sub' (student_id)    │
-│    - Injects authenticated student_id dependency into downstream handlers              │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 5. Pydantic v2 Request Validation (app/schemas/)                                       │
-│    - Strict typing, regex format verification, min/max length constraints              │
-│    - Automatically emits 422 Unprocessable Entity with exact field-level errors        │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 6. Controller & Domain Service Execution                                               │
-│    - Routes -> Controllers -> Services -> Database / Cache / Vector Store             │
-│    - Code-level tenant ownership checks (app/utils/ownership.py) enforce isolation     │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘
-                                            │
-                                            ▼
-                               [ Uniform JSON Envelope ]
+```mermaid
+flowchart TD
+    Client["Client Inbound Request"] --> SecHeaders["1. SecurityHeadersMiddleware<br/>• Inject X-Request-ID correlation ID<br/>• OWASP: nosniff, DENY, strict-origin"]
+    SecHeaders --> CORS["2. CORSMiddleware<br/>• Allowed origins: localhost:3000, 5173<br/>• Wildcard '*' blocked"]
+    CORS --> RateLimiter{"3. Rate Limiter<br/>(Redis Sliding Window)"}
+    RateLimiter -- "Exceeded" --> Err429["429 Too Many Requests"]
+    RateLimiter -- "Within Limit<br/>Chat: 30/min | Login: 20/min" --> AuthGuard{"4. Auth Guard<br/>(JWT Bearer)"}
+    AuthGuard -- "Invalid / Expired" --> Err401["401 Unauthorized"]
+    AuthGuard -- "Valid / Public" --> Validation{"5. Pydantic v2<br/>Payload Validation"}
+    Validation -- "Schema Invalid" --> Err422["422 Validation Error"]
+    Validation -- "Valid DTO" --> Controller["6. Controller & Domain Services<br/>• Route -> Controller -> Service<br/>• Code-Level Tenant Ownership Guard"]
+    Controller --> Response["Uniform JSON Response Envelope<br/>{status, message, data, request_id}"]
 ```
 
 ```mermaid

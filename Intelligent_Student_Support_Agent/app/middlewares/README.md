@@ -1,40 +1,29 @@
-# 🛡️ Middlewares & Authentication Guards (`app/middlewares`)
+# 🛡️ Middlewares & Security Guards (`app/middlewares`)
 
-The **Middlewares Layer** provides boundary security, identity extraction, and dependency injection guards for protected HTTP routes.
+The **Middlewares Layer** provides perimeter security, request correlation, rate limiting, and cryptographic authentication guards for incoming HTTP traffic before requests reach route handlers.
 
 ---
 
-## 🏗️ Bearer Authentication Flow
+## 🏗️ Request Guard & Middleware Pipeline
 
-```
-[ Incoming Client Request ]
-  Headers: { "Authorization": "Bearer eyJhbGciOi..." }
-             │
-             ▼
-┌──────────────────────────────────────────────────────────┐
-│             HTTPBearer Security Scheme Dependency        │
-│              (FastAPI HTTPBearer / auto_error=True)      │
-└────────────────────────────┬─────────────────────────────┘
-                             │ (Extracts Raw Token String)
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│      get_current_student(credentials: HTTPAuthorization) │
-│                (app/middlewares/auth.py)                 │
-├──────────────────────────────────────────────────────────┤
-│ 1. Unpacks token string from Bearer schema               │
-│ 2. Decodes JWT using settings.jwt_secret & algorithm     │
-│ 3. Validates expiration claim ('exp') against UTC now    │
-│ 4. Extracts student identity claim ('sub')               │
-└────────────────────────────┬─────────────────────────────┘
-                             │
-            ┌────────────────┴────────────────┐
-            │ (Valid Token)                   │ (Invalid / Expired)
-            ▼                                 ▼
-┌────────────────────────────┐    ┌──────────────────────────────┐
-│ Injects validated          │    │ Raises AuthenticationError   │
-│ `student_id: str` into     │    │ (HTTP 401 Unauthorized)      │
-│ endpoint parameter         │    └──────────────────────────────┘
-└────────────────────────────┘
+```mermaid
+flowchart TD
+    Req["Client HTTP Request<br/>• Method, Path, Headers"] --> SecHeaders["1. SecurityHeadersMiddleware (security_headers.py)<br/>• Extracts / injects UUIDv4 X-Request-ID correlation token<br/>• Sets OWASP headers: nosniff, DENY, strict-origin"]
+
+    SecHeaders --> RateLimiter{"2. rate_limiter Dependency (rate_limiter.py)<br/>Redis sliding-window atomic counter"}
+
+    RateLimiter -- "Threshold Exceeded" --> Err429["Raise 429 Too Many Requests<br/>(Includes X-Request-ID in error body)"]
+    RateLimiter -- "Within Limit<br/>Chat: 30/min | Login: 20/min" --> RouteType{"Endpoint Auth Guard"}
+
+    RouteType -- "Public Endpoint<br/>(/signup, /login, /health)" --> Handler["Dispatch to Route Handler"]
+
+    RouteType -- "Protected Endpoint<br/>(Bearer JWT Required)" --> AuthGuard["3. get_current_student (auth.py)<br/>• Extract Bearer token from Authorization header<br/>• Decode HS256 JWT using settings.jwt_secret"]
+
+    AuthGuard --> TokenVerify{"Token Verification"}
+    TokenVerify -- "Expired or Invalid Signature" --> Err401["Raise AuthenticationError<br/>(HTTP 401 Unauthorized)"]
+    TokenVerify -- "Valid Token" --> InjectUser["Inject validated student_id (sub)<br/>into route parameter"]
+
+    InjectUser --> Handler
 ```
 
 ---
@@ -43,12 +32,14 @@ The **Middlewares Layer** provides boundary security, identity extraction, and d
 
 | File | Core Component | Role & Functionality |
 |---|---|---|
-| [`auth.py`](./auth.py) | `get_current_student` | FastAPI dependency function that validates Bearer JWT tokens and yields the authenticated caller's verified `student_id`. |
+| [`auth.py`](./auth.py) | `get_current_student` | FastAPI dependency that extracts and validates Bearer JWT tokens, ensures valid `exp` timestamp, and yields the authenticated caller's verified `student_id`. |
+| [`security_headers.py`](./security_headers.py) | `SecurityHeadersMiddleware` | Pure ASGI middleware that injects distributed `X-Request-ID` correlation tokens and OWASP security headers (`nosniff`, `DENY`, `strict-origin-when-cross-origin`, `1; mode=block`). |
+| [`rate_limiter.py`](./rate_limiter.py) | `rate_limiter` | Sliding-window rate limiter dependency using atomic Redis sorted sets with transparent in-memory window fallback. Protects `/chat` (30/min) and `/auth/login` (20/min). |
 
 ---
 
 ## 🔒 Security Best Practices
 
-1. **Stateless JWT Claims**: Tokens carry the `sub` (student identifier) and `exp` (expiration), avoiding persistent session lookups in memory for every API touchpoint.
-2. **Deterministic Ownership**: Because `get_current_student` extracts the ID directly from the cryptographically signed JWT payload, endpoints cannot be tricked by forged query parameters or path variables.
-3. **Consistent Rejection**: Missing headers, malformed signatures, or expired tokens immediately trigger an `AuthenticationError` (status 401).
+1. **Stateless JWT Claims**: Tokens carry the `sub` (student identifier) and `exp` (expiration), avoiding expensive persistent session lookups in the database for every API call.
+2. **Deterministic Tenant Ownership**: Because `get_current_student` extracts the identity directly from the cryptographically signed JWT payload, endpoints cannot be deceived by forged query parameters or path variables.
+3. **Defense in Depth**: Every layer operates independently: `SecurityHeadersMiddleware` protects the protocol transport, `rate_limiter` protects system resources, and `get_current_student` guards data authorization.

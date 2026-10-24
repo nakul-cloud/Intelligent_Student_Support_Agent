@@ -6,44 +6,101 @@ The **Models Layer** defines the persistent PostgreSQL relational schema using S
 
 ## 🏗️ Entity Relationship Diagram (PostgreSQL)
 
-```
-                       ┌─────────────────────────┐
-                       │        students         │
-                       ├─────────────────────────┤
-                       │ PK  id (UUID)           │
-                       │ UQ  student_id (String) │◄─────────────┐
-                       │     name (String)       │              │
-                       │     programme (String)  │              │
-                       │     batch (String)      │              │
-                       │     phone / email       │              │
-                       │     address (Text)      │              │
-                       └───────────┬─────────────┘              │
-                                   │                            │
-         ┌─────────────────────────┼─────────────────────────┐  │
-         │ (1:1)                   │ (1:1)                   │  │ (1:1)
-         ▼                         ▼                         ▼  ▼
-┌─────────────────┐       ┌─────────────────┐       ┌───────────────────┐
-│   fee_records   │       │  scholarships   │       │ auth_credentials  │
-├─────────────────┤       ├─────────────────┤       ├───────────────────┤
-│ PK id (UUID)    │       │ PK id (UUID)    │       │ PK id (UUID)      │
-│ FK student_id   │       │ FK student_id   │       │ UQ student_id     │
-│    total_fee    │       │    type         │       │    hashed_password│
-│    paid/pending │       │    percentage   │       └───────────────────┘
-│    due_date     │       │    amount       │
-│    receipt      │       │    status       │
-└─────────────────┘       └─────────────────┘
-                                   │
-                                   │ (1:N)
-                                   ▼
-┌─────────────────┐       ┌─────────────────┐       ┌───────────────────┐
-│  conversations  │ (1:N) │    messages     │       │  support_tickets  │
-├─────────────────┤       ├─────────────────┤       ├───────────────────┤
-│ PK id (UUID)    │◄──────┤ PK id (UUID)    │       │ PK id (UUID)      │
-│    student_id   │       │ FK conv_id      │       │ UQ ticket_id      │
-│    title        │       │    role/content │       │    student_id     │
-│    created_at   │       │    meta (JSONB) │       │    category/desc  │
-└─────────────────┘       └─────────────────┘       │    priority/status│
-                                                    └───────────────────┘
+```mermaid
+erDiagram
+    students ||--o| fee_records : "has one ledger"
+    students ||--o| scholarships : "awarded"
+    students ||--o| auth_credentials : "authenticates via"
+    students ||--o{ support_tickets : "files"
+    students ||--o{ conversations : "initiates"
+    conversations ||--o{ messages : "contains"
+    students ||--o{ student_memory : "remembers facts"
+    students ||--o{ audit_logs : "audits actions"
+
+    students {
+        UUID id PK
+        string student_id UK
+        string name
+        string programme
+        string batch
+        string phone
+        string email
+        string address
+        string status
+    }
+
+    fee_records {
+        UUID id PK
+        string student_id FK
+        float total_fee
+        float paid
+        float pending
+        string due_date
+        string status
+        string receipt
+    }
+
+    scholarships {
+        UUID id PK
+        string student_id FK
+        string scholarship_type
+        float percentage
+        float amount_per_semester
+        string status
+    }
+
+    auth_credentials {
+        UUID id PK
+        string student_id UK
+        string hashed_password
+    }
+
+    support_tickets {
+        UUID id PK
+        string ticket_id UK
+        string student_id FK
+        string category
+        string description
+        string priority
+        string status
+        datetime created_at
+    }
+
+    conversations {
+        UUID id PK
+        string student_id FK
+        string title
+        string status
+        datetime created_at
+    }
+
+    messages {
+        UUID id PK
+        UUID conversation_id FK
+        string role
+        string content
+        jsonb meta_data
+        datetime created_at
+    }
+
+    student_memory {
+        UUID id PK
+        string student_id FK
+        string key
+        string value
+        string category
+        datetime updated_at
+    }
+
+    audit_logs {
+        UUID id PK
+        string student_id
+        string action
+        string target_id
+        string decision
+        string result
+        datetime created_at
+    }
 ```
 
 ---

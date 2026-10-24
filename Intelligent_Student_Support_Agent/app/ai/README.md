@@ -6,43 +6,26 @@ The **AI Layer** implements the end-to-end Retrieval-Augmented Generation (RAG) 
 
 ## 🏗️ End-to-End RAG Ingestion & Retrieval Pipeline
 
-```
-[ University Student Handbook (PDF) ]
-                 │
-                 ▼
-┌───────────────────────────────────────────────┐
-│          1. PDF Text & Layout Parser          │  <-- app/ai/ingestion/pdf_parser.py
-│  - Page-by-page extraction via PyPDF          │
-│  - Structural heading detection & hierarchy   │
-│  - Tabular rule & clause reconstruction       │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────┐
-│        2. Dynamic Semantic Chunker            │  <-- app/ai/ingestion/chunker.py
-│  - Target chunk size: ~1800 chars (450 tokens)│
-│  - Overlap: 200 chars (clause continuity)     │
-│  - Metadata: page, section, category tags     │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────┐
-│        3. Local HuggingFace Embedder          │  <-- app/ai/ingestion/embedder.py
-│  - Model: Orange/orange-nomic-v1.5-1536       │
-│  - Produces 1536-dimensional dense vectors    │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────┐
-│         4. Qdrant Vector Database             │  <-- app/ai/retrieval/vector_store.py
-│  - Collection: "student_handbook"             │
-│  - Distance: Cosine Similarity                │
-│  - Payload: full text, page, section heading  │
-└───────────────────────────────────────────────┘
-                        ▲
-                        │ (Runtime Query: search_student_handbook)
-                        │
-[ Conversational Agent Inquires: "What is the fee refund policy?" ]
+```mermaid
+flowchart TD
+    subgraph Ingestion["1. Document Ingestion Pipeline (app/ai/ingestion/)"]
+        PDF["📄 University Student Handbook (PDF)<br/>data/student_handbook.pdf"] --> Parser["PDFParser (pdf_parser.py)<br/>• Structural heading detection<br/>• Tabular clause reconstruction"]
+        Parser --> Chunker["SemanticChunker (chunker.py)<br/>• Window: ~1800 chars (450 tokens)<br/>• Overlap: 200 chars for clause cohesion"]
+        Chunker --> Embedder["LocalEmbedder (embedder.py)<br/>• Model: Orange/orange-nomic-v1.5-1536<br/>• 1536-dim Dense Embedding Vectors<br/>• Thread-safe Singleton & LRU Cache"]
+    end
+
+    Embedder --> VectorDB[("Qdrant Vector DB<br/>• Collection: student_handbook<br/>• Distance: Cosine Similarity<br/>• Payload: text, page, section_filter")]
+    Embedder --> PostgresDocs[("PostgreSQL 'documents' Table<br/>• Ingestion Tracking & Checksum Status")]
+
+    subgraph Retrieval["2. Runtime RAG Retrieval Pipeline (app/ai/retrieval/)"]
+        AgentQuery["Agent Query via rag_tool.py<br/>'What is the late fee policy?'"] --> CacheCheck{"Redis RAG Cache<br/>(24h SHA256 Key)"}
+        CacheCheck -- "Cache Hit (2.3 ms)" --> CachedResult["Return Cached Citations"]
+        CacheCheck -- "Cache Miss" --> VectorSearch["QdrantVectorStore (vector_store.py)<br/>• Cosine similarity search (top_k=3)<br/>• Score threshold >= 0.45"]
+        VectorDB -.-> VectorSearch
+        VectorSearch --> PopulateCache["Write to Redis Cache"]
+        PopulateCache --> FinalCitations["Assemble Policy Citations & Page Provenance<br/>[Handbook Section 4.2 | Page 12]"]
+        CachedResult --> FinalCitations
+    end
 ```
 
 ---

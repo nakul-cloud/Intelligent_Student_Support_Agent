@@ -6,31 +6,40 @@ The **Tools Layer** contains executable Python functions that the conversational
 
 ## 🏗️ Agent Tool Execution Lifecycle
 
-```
-[ LLM Decides to Call Tool: e.g. get_fee_status(student_id="STU001") ]
-                                  │
-                                  ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                   Ownership Guardrail Gatekeeper                       │
-│                     (app/utils/ownership.py)                           │
-├────────────────────────────────────────────────────────────────────────┤
-│ Checks: Is caller 'STU001' authorized to query student 'STU001'?       │
-│ - IF caller == student_id: ALLOWED                                     │
-│ - IF caller != student_id: BLOCKED -> Logs security event & rejects     │
-└─────────────────────────────────┬──────────────────────────────────────┘
-                                  │ (If Allowed)
-                                  ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Target Tool Execution                           │
-│  - fee_tool: Queries PostgreSQL fee_records table                      │
-│  - scholarship_tool: Queries PostgreSQL scholarships table             │
-│  - ticket_tool: Inserts/queries PostgreSQL support_tickets table       │
-│  - profile_tool: Updates contact phone/email/address                   │
-│  - rag_tool: Semantic vector search over Qdrant handbook               │
-└─────────────────────────────────┬──────────────────────────────────────┘
-                                  │
-                                  ▼
-[ Formatted Text Observation Returned to LLM Context for Final Answer ]
+```mermaid
+flowchart TD
+    Call["LLM Emits Tool Call<br/>e.g. get_fee_status(student_id='STU001')"] --> Guard{"Ownership Guardrail Gatekeeper<br/>check_ownership(caller, target)"}
+
+    Guard -- "caller != target<br/>(Cross-Student Access)" --> Blocked["BLOCKED: Access Denied<br/>• Log immutable event to audit_logs<br/>• Return rejection string to LLM context"]
+
+    Guard -- "caller == target<br/>(Allowed)" --> Allowed["ALLOWED: Target Tool Execution"]
+
+    subgraph ToolSuite["Executable Domain Tools Layer (app/tools/)"]
+        direction TB
+        Fee["fee_tool.py<br/>• Query fee_records in PostgreSQL<br/>• Total, paid, pending dues, receipt"]
+        Schol["scholarship_tool.py<br/>• Query scholarships in PostgreSQL<br/>• Award type, percentage, semester grant"]
+        Ticket["ticket_tool.py<br/>• Insert / query support_tickets<br/>• Automatic ticket UUID generation"]
+        Profile["profile_tool.py<br/>• Update contact phone, email, address<br/>• Atomic commit in PostgreSQL"]
+        Auth["auth_tool.py<br/>• Update student password in DB<br/>• Immediate bcrypt rehash"]
+        RAG["rag_tool.py (Sub-Second RAG)<br/>• Qdrant Vector DB Cosine Similarity<br/>• RAM pre-warmed + 24h Redis Cache"]
+    end
+
+    Allowed --> Fee
+    Allowed --> Schol
+    Allowed --> Ticket
+    Allowed --> Profile
+    Allowed --> Auth
+    Allowed --> RAG
+
+    Fee --> Obs["Format String Observation"]
+    Schol --> Obs
+    Ticket --> Obs
+    Profile --> Obs
+    Auth --> Obs
+    RAG --> Obs
+    Blocked --> Obs
+
+    Obs --> Return["Append Observation to Context & Return to Agent ReAct Loop"]
 ```
 
 ---

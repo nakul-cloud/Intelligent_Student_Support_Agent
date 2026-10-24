@@ -25,42 +25,36 @@
 
 The application is structured following **Domain-Driven Design (DDD)** and **SOLID Principles**:
 
-```
-                       ┌─────────────────────────────────────────┐
-                       │     Frontend Portal (React 19 + Vite)   │
-                       │     http://localhost:3000               │
-                       └────────────────────┬────────────────────┘
-                                            │ HTTP / JSON
-                                            ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        FastAPI Application Gateway (Port 8000)                         │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│  Routes (/api/v1)        Controllers Layer         Middlewares & Security              │
-│  - /auth                 - AuthController          - get_current_student (JWT Bearer)  │
-│  - /student              - StudentController       - CORS Middleware                   │
-│  - /chat                 - ChatController          - Global Exception Handlers         │
-│  - /ingest               - IngestionController                                         │
-│  - /audit                - AuditController                                             │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                  Domain Services                                       │
-│  - AuthService           - ChatService             - StudentService                    │
-│  - ApprovalService       - AuditService            - IngestionService                  │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                          Agentic Intelligence & Tools Layer                            │
-│  - agent_loop.py (ReAct) - Groq LLM (gpt-oss-120b) - System Prompt & Date Injection    │
-│  - fee_tool              - scholarship_tool        - ticket_tool / auth_tool           │
-│  - rag_tool (Dense Search)                         - profile_tool                      │
-└───────────────┬───────────────────────────┬───────────────────────────┬────────────────┘
-                │                           │                           │
-                ▼                           ▼                           ▼
-┌───────────────────────────────┐ ┌───────────────────┐ ┌───────────────────────────────┐
-│     PostgreSQL 16 (Docker)    │ │   Redis 7 (Docker)│ │     Qdrant Vector DB (Docker) │
-│ - Pure backend, zero SQLite   │ │ - Ephemeral cache │ │ - Dense collection:           │
-│ - students (20 personas)      │ │ - Sliding window  │ │   student_handbook            │
-│ - fee_records & scholarships  │ │   (TTL: 24 Hours) │ │ - 1536-dim embeddings via     │
-│ - auth_credentials (bcrypt)   │ └───────────────────┘ │   Orange/orange-nomic-v1.5    │
-│ - student_memory & audit_logs │                       └───────────────────────────────┘
-└───────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph ClientTier["Client Gateway"]
+        Frontend["Frontend Student Portal (React 19 + Vite)<br/>http://localhost:3000"]
+    end
+
+    Frontend -->|"HTTP / REST API (JSON)"| Gateway
+
+    subgraph BackendGateway["FastAPI Application Gateway (Port 8000)"]
+        direction TB
+        Gateway["1. Routes & Perimeter Middlewares<br/>• /api/v1 (auth, student, chat, audit, ingest, health)<br/>• OWASP Headers, CORS Restriction, Sliding-Window Rate Limiter"]
+
+        Gateway --> Controllers["2. Controllers Layer (app/controllers/)<br/>• AuthController, StudentController, ChatController, etc.<br/>• Standard JSON Envelope formatting (success_response)"]
+
+        Controllers --> Services["3. Domain Services Layer (app/services/)<br/>• AuthService, StudentService, ChatService, AuditService<br/>• ApprovalService (Human-in-the-Loop sensitive gate)"]
+
+        Services --> Agent["4. Agentic Intelligence Core (app/agent/ & app/tools/)<br/>• ReAct Multi-Turn Loop (agent_loop.py)<br/>• LLMFactory with dynamic fallback (qwen/qwen3.8-27b)<br/>• fee, scholarship, ticket, profile, rag_tool"]
+    end
+
+    subgraph DataTier["Docker Infrastructure Layer"]
+        Postgres[("PostgreSQL 16 Container<br/>• Pure backend, zero SQLite fallback<br/>• 20 Student personas (STU001-STU020)<br/>• fee_records, scholarships, audit_logs")]
+        Redis[("Redis 7 Container<br/>• L1 Ephemeral sliding-window memory<br/>• Atomic rate-limiting counters & RAG cache")]
+        Qdrant[("Qdrant Vector DB Container<br/>• student_handbook dense collection<br/>• 1536-dim embeddings via Orange/orange-nomic-v1.5")]
+    end
+
+    Services --> Postgres
+    Services --> Redis
+    Agent --> Postgres
+    Agent --> Redis
+    Agent --> Qdrant
 ```
 
 > [!NOTE]

@@ -6,31 +6,18 @@ The **Schemas Layer** defines Pydantic v2 models for inbound request validation,
 
 ## 🏗️ Data Validation & Serialization Flow
 
-```
-[ Inbound JSON Payload ]
-           │
-           ▼
-┌──────────────────────────────────────────────┐
-│        Pydantic v2 Inbound DTO               │  <-- e.g., SignupRequest, ChatRequest
-│  - Field type checking                       │
-│  - Minimum length & regex constraints        │
-│  - Strict sanitization & normalization       │
-└──────────────────────┬───────────────────────┘
-                       │ (Valid DTO forwarded to service)
-                       ▼
-┌──────────────────────────────────────────────┐
-│           Domain Business Logic              │
-└──────────────────────┬───────────────────────┘
-                       │ (Returns entity or result dictionary)
-                       ▼
-┌──────────────────────────────────────────────┐
-│       Pydantic v2 Outbound Response DTO      │  <-- e.g., TokenResponse, StudentProfileDTO
-│  - Strips sensitive internal columns         │
-│  - Guarantees standard field naming          │
-└──────────────────────┬───────────────────────┘
-                       │
-                       ▼
-[ Client Receives Validated JSON ]
+```mermaid
+flowchart TD
+    JSON["Inbound HTTP JSON Payload"] --> InDTO["Pydantic v2 Inbound Request DTO<br/>(e.g. SignupRequest, ChatRequest, UpdateProfileRequest)"]
+
+    InDTO --> Validation{"Pydantic Field Validation<br/>• Type checks, regex assertions<br/>• min_length, max_length constraints"}
+
+    Validation -- "Invalid Field" --> Err422["Automatic 422 Unprocessable Entity<br/>Emits exact field validation details"]
+    Validation -- "Payload Valid" --> DomainLogic["Domain Service Execution<br/>(Business logic & DB queries)"]
+
+    DomainLogic --> OutDTO["Pydantic v2 Outbound Response Schema<br/>(e.g. TokenResponse, FeeSummaryResponse, ChatResponse)"]
+
+    OutDTO --> Envelope["Uniform JSON Response Envelope<br/>success_response(data=model.model_dump())"]
 ```
 
 ---

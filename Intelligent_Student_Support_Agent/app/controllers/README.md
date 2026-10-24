@@ -6,29 +6,33 @@ The **Controllers Layer** serves as the mediation and dispatch boundary between 
 
 ## 🏗️ Architectural Request Flow
 
-```
-[ HTTP Request ]
-       │
-       ▼
-┌───────────────────────────────┐
-│     FastAPI Route Layer       │  <-- Route endpoints, query params & path parsing
-└──────────────┬────────────────┘
-               │ (Passes parsed DTOs & injected AsyncSession)
-               ▼
-┌───────────────────────────────┐
-│       Controller Layer        │  <-- app/controllers/
-│  - Unpacks student context    │
-│  - Calls domain services      │
-│  - Formats HTTP status codes  │
-└──────────────┬────────────────┘
-               │ (Delegates execution)
-               ▼
-┌───────────────────────────────┐
-│        Services Layer         │  <-- app/services/ (AuthService, StudentService, etc.)
-└──────────────┬────────────────┘
-               │ (Formats standard envelope)
-               ▼
-[ JSONResponse: {status, message, data} ]
+```mermaid
+flowchart TD
+    Req["Inbound HTTP Request"] --> Routes["FastAPI Routes Layer<br/>• Pydantic DTO Validation<br/>• Bearer JWT Extraction (student_id)"]
+    Routes -->|"DTO + student_id + AsyncSession"| Controllers["Controllers Layer (app/controllers/)"]
+
+    subgraph ControllersGroup["Controller Specialization (Single Responsibility)"]
+        direction TB
+        AuthCtrl["AuthController<br/>• signup(), login(), change_password()"]
+        StudentCtrl["StudentController<br/>• get_profile(), get_fees(), get_tickets()"]
+        ChatCtrl["ChatController<br/>• send_message(), list_conversations()"]
+        AuditCtrl["AuditController<br/>• get_logs(), get_summary()"]
+        IngestCtrl["IngestionController<br/>• ingest_document()"]
+    end
+
+    Controllers --> AuthCtrl
+    Controllers --> StudentCtrl
+    Controllers --> ChatCtrl
+    Controllers --> AuditCtrl
+    Controllers --> IngestCtrl
+
+    AuthCtrl --> Services["Domain Services Layer (app/services/)<br/>• AuthService, StudentService, ChatService, etc."]
+    StudentCtrl --> Services
+    ChatCtrl --> Services
+    AuditCtrl --> Services
+    IngestCtrl --> Services
+
+    Services --> Envelope["Uniform JSON Response Envelope<br/>• success_response(status_code, message, data)<br/>• Standard: {status, message, data, request_id}"]
 ```
 
 ---

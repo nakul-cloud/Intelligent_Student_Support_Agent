@@ -6,31 +6,42 @@ The **Services Layer** contains the core domain logic, transactional rules, iden
 
 ## 🏗️ Domain Service Architecture
 
-```
-                                  [ Controller / API Request ]
-                                                │
-                                                ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                     Domain Services Layer                                     │
-├───────────────────────────────┬───────────────────────────────┬───────────────────────────────┤
-│       AuthService             │        ChatService            │       StudentService          │
-│ - Option 2 Enrollment Check   │ - Multi-Turn Agent Loop       │ - Student Profile Queries     │
-│ - Bcrypt Password Hashing     │ - Memory Injection & Recall   │ - Contact Profile Updates     │
-│ - JWT Token Lifecycle         │ - RAG Vector Semantic Search  │ - Fee & Scholarship Auditing  │
-├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
-│      ApprovalService          │        AuditService           │      IngestionService         │
-│ - Human-In-The-Loop Approval  │ - Immutable Security Logging  │ - PDF Extraction & Chunking   │
-│ - Pending Escalation Tickets  │ - Allowed/Blocked Analytics   │ - Vector Storage & Embeddings │
-└───────────────────────────────┴───────────────┬───────────────┴───────────────────────────────┘
-                                                │
-                                                ▼
-               ┌────────────────────────────────┴───────────────────────────────┐
-               ▼                                ▼                               ▼
-┌─────────────────────────────┐  ┌─────────────────────────────┐  ┌─────────────────────────────┐
-│    PostgreSQL (Docker)      │  │     Redis (Docker Cache)    │  │     Qdrant Vector DB        │
-│ Relational records, auth,   │  │ Ephemeral session state,    │  │ Student Handbook embeddings │
-│ durable facts, audit logs   │  │ sliding conversation window │  │ and semantic chunks         │
-└─────────────────────────────┘  └─────────────────────────────┘  └─────────────────────────────┘
+```mermaid
+flowchart TD
+    Ctrl["Controllers / API Inbound Request"] --> Services["Domain Services Layer (app/services/)"]
+
+    subgraph ServiceCatalog["Domain Business Logic Services"]
+        direction TB
+        AuthSvc["AuthService<br/>• Option 2 Roster Verification<br/>• bcrypt Hashing & JWT Token Lifecycle"]
+        ChatSvc["ChatService<br/>• Multi-Turn ReAct Agent Orchestration<br/>• Dynamic Fallback & Memory Injection"]
+        StudentSvc["StudentService<br/>• Profile, Ledger & Scholarship Queries<br/>• Contact Detail Updates in PostgreSQL"]
+        ApprovalSvc["ApprovalService<br/>• Human-in-the-Loop Sensitive Action Gate<br/>• Confirmation / Rejection Decisions"]
+        AuditSvc["AuditService<br/>• Immutable Security Trail Logging<br/>• Compliance Metrics (ALLOWED, BLOCKED)"]
+        IngestSvc["IngestionService<br/>• PDF Handbook Parsing & Semantic Chunking<br/>• 1536-dim Embedding Vectorization"]
+    end
+
+    Services --> AuthSvc
+    Services --> ChatSvc
+    Services --> StudentSvc
+    Services --> ApprovalSvc
+    Services --> AuditSvc
+    Services --> IngestSvc
+
+    subgraph StorageLayer["Infrastructure & Persistence (Docker)"]
+        Postgres[("PostgreSQL 16 DB<br/>• students, auth_credentials<br/>• fee_records, scholarships, audit_logs")]
+        Redis[("Redis 7 Cache<br/>• L1 Sliding Window Memory<br/>• Rate Limit Counters & RAG Cache")]
+        Qdrant[("Qdrant Vector DB<br/>• student_handbook Collection<br/>• 1536-dim Cosine Similarity")]
+    end
+
+    AuthSvc --> Postgres
+    StudentSvc --> Postgres
+    ApprovalSvc --> Postgres
+    AuditSvc --> Postgres
+    ChatSvc --> Postgres
+    ChatSvc --> Redis
+    ChatSvc --> Qdrant
+    IngestSvc --> Qdrant
+    IngestSvc --> Postgres
 ```
 
 ---

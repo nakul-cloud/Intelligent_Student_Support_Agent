@@ -6,34 +6,31 @@ The **Agent Layer** manages the execution cycle of the AI Student Support Agent,
 
 ## 🏗️ Multi-Turn Agent Loop Lifecycle
 
-```
-[ Inbound Student Prompt + Dual-Tier Memory Facts ]
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 Initialize Turn Context                     │
-│  - Assemble System Prompt + Injected Student Memories       │
-│  - Attach JSON Tool Schemas (AGENT_TOOLS)                   │
-│  - Open Turn Tracer (LocalTurnTracer & optional LangSmith)   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│             Inference Call to Groq LLM API                  │
-│       (app/agent/client.py -> AsyncOpenAI wire protocol)     │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-         ┌───────────────┴───────────────┐
-         ▼ (LLM Requests Tool Calls)     ▼ (LLM Emits Final Answer)
-┌──────────────────────────────────┐ ┌─────────────────────────┐
-│     Execute Tool Dispatcher      │ │    Assemble Citations   │
-│  - Verify Ownership Security     │ │  - Page references      │
-│  - Execute PostgreSQL/Qdrant Tool│ │  - Ledger receipts      │
-│  - Append Observation to Context │ └────────────┬────────────┘
-└────────────────┬─────────────────┘              │
-                 │                                ▼
-                 └──────► [ Re-invoke LLM ]  [ Return ChatResponse ]
-                          (Max 5 iterations)
+```mermaid
+flowchart TD
+    Start["Inbound Student Turn<br/>• User Query + Dual-Tier Memory Context"] --> Init["1. Initialize Turn Context<br/>• Assemble System Prompt & Student Facts<br/>• Bind AGENT_TOOLS Schemas<br/>• Initialize LocalTurnTracer"]
+    Init --> Infer["2. LLM Inference via LLMFactory<br/>• Primary Model: settings.groq_model<br/>• Fallback Model: settings.groq_fallback_model (qwen/qwen3.8-27b)"]
+
+    Infer --> Decision{"LLM Decision"}
+
+    Decision -- "Emits Tool Calls" --> Dispatch["3. Tool Dispatcher (app/tools/)<br/>• check_ownership(caller, target)<br/>• fee, scholarship, ticket, or rag_tool"]
+    
+    Dispatch --> Gate{"Ownership & Action Gate"}
+    Gate -- "Cross-Student Access" --> Block["BLOCKED: Security Audit Log<br/>Observation: Access Denied"]
+    Gate -- "Sensitive Action" --> Suspend["SUSPEND: pending_approval = True<br/>Awaiting Student Confirmation"]
+    Gate -- "Allowed" --> ExecTool["Execute Tool against DB / Vector Store<br/>Format Observation String"]
+
+    Block --> ContextUpdate["Append Tool Observation to Messages"]
+    ExecTool --> ContextUpdate
+    ContextUpdate --> LoopGuard{"Iteration < max_turns (6)?"}
+    LoopGuard -- "Yes" --> Infer
+    LoopGuard -- "Max Turns Reached" --> FinalFallback["Synthesize Best-Effort Explanation"]
+
+    Decision -- "Emits Text Answer" --> Citations["4. Citation & Output Processing<br/>• Match Page & Section Provenance<br/>• Extract Non-Sensitive Facts for Memory"]
+    FinalFallback --> Citations
+    Suspend --> Citations
+
+    Citations --> Result["5. Return ChatResponse<br/>• message, conversation_id, trace_id<br/>• facts_learned, pending_approval, trace metrics"]
 ```
 
 ---

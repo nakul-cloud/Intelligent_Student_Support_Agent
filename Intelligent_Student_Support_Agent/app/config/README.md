@@ -6,26 +6,15 @@ The **Config Layer** manages application environment variables, asynchronous dat
 
 ## 🏗️ Configuration & Connection Architecture
 
-```
-[ .env Configuration File / System Environment ]
-                       │
-                       ▼
-┌───────────────────────────────────────────────┐
-│        Pydantic BaseSettings (settings.py)    │
-│  - Type-safe parsing & validation             │
-│  - Safe defaults for local Docker development │
-└──────────────────────┬────────────────────────┘
-                       │
-         ┌─────────────┴─────────────┐
-         ▼                           ▼
-┌─────────────────────────┐ ┌─────────────────────────┐
-│       database.py       │ │        redis.py         │
-├─────────────────────────┤ ├─────────────────────────┤
-│ - AsyncEngine (Postgres)│ │ - Redis Client Singleton│
-│ - AsyncSessionLocal pool│ │ - ping_redis() probe    │
-│ - Zero SQLite Fallback  │ │ - Graceful cache bypass │
-│ - init_db() schema sync │ └─────────────────────────┘
-└─────────────────────────┘
+```mermaid
+flowchart TD
+    Env[".env Configuration File / System Environment"] --> Settings["Pydantic BaseSettings (settings.py)<br/>• Type-safe parsing & validation<br/>• DB URLs, JWT secret, Groq keys, Fallback model"]
+
+    Settings --> DB["PostgreSQL AsyncEngine (database.py)<br/>• pool_size=20, max_overflow=10<br/>• pool_pre_ping=True (stale recycling)<br/>• Zero SQLite Fallback Policy"]
+    Settings --> Redis["Redis Async Client (redis.py)<br/>• Ephemeral L1 Sliding Window<br/>• Sliding-Window Rate Limiting<br/>• ping_redis() health verification"]
+    Settings --> QdrantConfig["Qdrant Settings<br/>• qdrant_url & collection configuration"]
+
+    DB --> SessionFactory["async_sessionmaker (AsyncSessionLocal)<br/>Yields AsyncSession via get_db dependency"]
 ```
 
 ---

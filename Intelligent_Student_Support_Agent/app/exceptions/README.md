@@ -6,32 +6,29 @@ The **Exceptions Layer** centralizes domain error modeling, HTTP status translat
 
 ## 🏗️ Exception Handling Pipeline
 
-```
-[ Application Code Raises Domain Exception ]
-   (e.g., raise ResourceNotFoundError("Student ID not enrolled"))
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────────┐
-│              Global FastAPI Exception Handlers           │
-│                  (app/exceptions/handlers.py)            │
-├──────────────────────────┬───────────────────────────────┤
-│    app_error_handler     │ Intercepts AppError hierarchy │
-│  http_exception_handler  │ Handles Starlette HTTPException│
-│ validation_error_handler │ Formats Pydantic validation   │
-│ global_exception_handler │ Catches unexpected runtime 500│
-└──────────────────────────┴───────────────┬───────────────┘
-                                           │
-                                           ▼ (Formats uniform envelope)
-┌──────────────────────────────────────────────────────────┐
-│                      Client Response                     │
-│  Status: 400 / 401 / 404 / 409 / 422 / 500               │
-│                                                          │
-│  {                                                       │
-│    "status": "fail",                                     │
-│    "message": "Student ID 'STU999' is not enrolled...",  │
-│    "errors": null                                        │
-│  }                                                       │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Exc["Application Layer Raises Exception<br/>(e.g. ResourceNotFoundError, ValidationError)"] --> Handlers["Global Exception Handlers (handlers.py)"]
+
+    subgraph HandlerTypes["Specialized Exception Handlers"]
+        direction TB
+        AppErr["app_error_handler<br/>• Intercepts custom AppError hierarchy"]
+        HTTPExc["http_exception_handler<br/>• Handles FastAPI / Starlette HTTPException"]
+        ValErr["validation_error_handler<br/>• Formats Pydantic v2 RequestValidationError"]
+        GlobErr["global_exception_handler<br/>• Catches unexpected unhandled 500 exceptions"]
+    end
+
+    Handlers --> AppErr
+    Handlers --> HTTPExc
+    Handlers --> ValErr
+    Handlers --> GlobErr
+
+    AppErr --> Format["Extract request_id from Request State / Header"]
+    HTTPExc --> Format
+    ValErr --> Format
+    GlobErr --> Format
+
+    Format --> Envelope["Uniform Error Envelope<br/>{status: 'fail' | 'error', message, request_id, errors}"]
 ```
 
 ---

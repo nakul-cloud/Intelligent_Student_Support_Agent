@@ -1,282 +1,255 @@
 # Intelligent Student Support Agent 🎓
 
+[![React 19](https://img.shields.io/badge/Frontend-React_19_+_Vite-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16_(Docker)-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis 7](https://img.shields.io/badge/Redis-7_(Docker)-DC382D?logo=redis&logoColor=white)](https://redis.io/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-Vector_Store-DC2626?logo=qdrant&logoColor=white)](https://qdrant.tech/)
-[![Redis 7](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![Llama 3.3 70B](https://img.shields.io/badge/Groq-Llama_3.3_70B-F55036)](https://groq.com)
+[![Groq Llama 3.3 70B](https://img.shields.io/badge/Groq-Llama_3.3_70B-F55036)](https://groq.com)
+[![Dynamic Fallback](https://img.shields.io/badge/Fallback-Qwen_2.5_32B-8A2BE2)](https://groq.com)
 [![Chunking Fidelity](https://img.shields.io/badge/Chunking_Fidelity-100%25_PASS-success)](Intelligent_Student_Support_Agent/evaluation/results/chunking_audit_report.md)
 
 > **End-Term Capstone Project: Agentic AI Engineering**  
-> An autonomous, enterprise-grade multi-turn conversational AI student support system. Combines structure-aware policy RAG (from the 44-page official student handbook) with real-world PostgreSQL database tools (fees, scholarships, support tickets), stateful dual-tier memory (Redis + Postgres), and turn-by-turn observability.
+> An autonomous, enterprise-grade multi-turn conversational AI student support platform. Combines structure-aware policy RAG (from the 44-page official university handbook) with live PostgreSQL database tools (fees, scholarships, grievance tickets), stateful dual-tier memory (Redis L1 cache + PostgreSQL L2 permanent facts), dynamic multi-model fallback (`qwen/qwen3.8-27b`), and a responsive React 19 web portal.
 
 ---
 
-## 📌 Table of Contents
-1. [System Architecture](#-system-architecture)
-2. [Data Flow & Agent Loop](#-data-flow--agent-loop)
-3. [Document Ingestion & RAG Pipeline](#-document-ingestion--rag-pipeline)
-4. [Chunking Fidelity & Evaluation Dashboard](#-chunking-fidelity--evaluation-dashboard)
-5. [Database Schema & Mock Data](#-database-schema--mock-data)
-6. [Repository Structure](#-repository-structure)
-7. [Getting Started & Quickstart](#-getting-started--quickstart)
-8. [Available Tool Suite](#-available-tool-suite)
+## 📌 Master Documentation Hub
+
+| Documentation Guide | Focus Area & Description |
+|---|---|
+| 📡 **[Full REST API Documentation (`API_DOCUMENTATION.md`)](./Intelligent_Student_Support_Agent/API_DOCUMENTATION.md)** | Complete specification for all 17 REST endpoints with exact schemas, status codes, OWASP security headers, and copy-pasteable `curl` commands. |
+| 🏛️ **[Backend Core Architectural Guide (`Intelligent_Student_Support_Agent/README.md`)](./Intelligent_Student_Support_Agent/README.md)** | Deep Clean Architecture overview, 20 pre-seeded student personas, Option 2 self-enrollment mechanics, and dual-tier memory privacy gates. |
+| 📁 **[Subpackage Architecture Guides (All 15 Backend Modules)](./Intelligent_Student_Support_Agent/README.md#-module-documentation-index)** | Clickable guides with dedicated Mermaid flowcharts for `routes`, `controllers`, `services`, `agent`, `providers`, `memory`, `tools`, `ai`, and more. |
+| 🖥️ **[Frontend Student Portal (`Frontend/student-portal/README.md`)](./Intelligent_Student_Support_Agent/Frontend/student-portal/README.md)** | Modern React 19 + Vite student portal setup, authentication state, interactive chat UI, and responsive fee/profile dashboards. |
+| 🛡️ **[Security Hardening & Backend Audit Report (`BACKEND_AUDIT_REPORT.md`)](./Intelligent_Student_Support_Agent/BACKEND_AUDIT_REPORT.md)** | Production readiness verification: OWASP Top 10 API Security, sliding-window rate limiting, pure PostgreSQL connection pooling, and zero SQLite compliance. |
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ Full-Stack Monorepo Architecture
 
-The project adheres to enterprise clean architecture (**Routes → Controllers → Services → Agent Loop → Data Layer**), keeping business logic decoupled from transport and storage layers.
+The workspace implements a decoupled, modern multi-tier topology separating the frontend presentation layer, backend API gateway, persistent containerized storage, and external AI inference services:
 
 ```mermaid
-flowchart TB
-    subgraph Clients["1. Client Layer"]
-        CLI["Terminal CLI\n(just cli)"]
-        UI["Streamlit UI\n(just streamlit)"]
-        API_Client["REST Clients\n(Swagger / Postman)"]
+flowchart TD
+    subgraph ClientLayer["1. Client Presentation Tier"]
+        Portal["Web Student Portal<br/>(React 19 + Vite + Tailwind CSS)<br/>http://localhost:3000"]
+        TerminalCLI["Terminal CLI Agent<br/>(scripts/cli.py)<br/>just cli"]
     end
 
-    subgraph Backend["2. Enterprise Application Layer (FastAPI)"]
-        Routes["API Router & Endpoints\n(/api/v1/chat, /ingest)"]
-        Controller["Agent / Ingestion Controller"]
-        AuthMiddleware["User & Student Context Middleware"]
+    subgraph GatewayLayer["2. Backend Application Gateway (Port 8000)"]
+        FastAPI["FastAPI REST Application Gateway<br/>(Intelligent_Student_Support_Agent/app/)<br/>• Declarative RESTful Routes & Pydantic v2 DTOs<br/>• OWASP Security Headers (nosniff, DENY)<br/>• Sliding-Window Rate Limiter (Chat: 30/min, Login: 20/min)<br/>• HS256 JWT Authentication & Tenant Ownership Guard"]
+        
+        AgentCore["ReAct Conversational Agent Core<br/>• Multi-turn reasoning loop (agent_loop.py)<br/>• LLMFactory dynamic fallback orchestrator<br/>• Local execution tracer (traces/*.json)"]
     end
 
-    subgraph AgentCore["3. Agentic Decision Core"]
-        AgentLoop["Raw While-True Tool Calling Loop\n(Groq Llama 3.3 70B / OpenAI)"]
-        Tracer["Turn-by-Turn Local Tracer\n(Latency, Tokens, Reasoning Trace)"]
-        PromptBuilder["System Prompt Builder\n(Rules, Persona, Injected Profile)"]
+    subgraph CloudAI["3. External AI Model Inference"]
+        GroqPrimary["Primary Groq Model<br/>(llama-3.3-70b-versatile / gpt-oss-120b)"]
+        GroqFallback["Dynamic Fallback Model<br/>(qwen/qwen3.8-27b)"]
     end
 
-    subgraph MemoryTier["4. Dual-Tier Memory System"]
-        RedisMem["Short-Term Memory (Redis)\n• 10-turn Sliding Conversation Window\n• Sub-millisecond TTL Cache"]
-        PostgresMem["Long-Term Profile Memory (PostgreSQL)\n• Persistent Student Facts & Preferences\n• Sensitive Topic Redaction Filter"]
+    subgraph DataLayer["4. Containerized Persistence Infrastructure (Docker)"]
+        Postgres[("PostgreSQL 16 DB<br/>• students, auth_credentials<br/>• fee_records, scholarships<br/>• support_tickets, audit_logs<br/>• Durable student_memory (L2)")]
+        Redis[("Redis 7 Cache<br/>• L1 Sliding Window Memory<br/>• Sliding-Window Rate Limit Keys<br/>• Sub-Second RAG Query Cache")]
+        Qdrant[("Qdrant Vector DB<br/>• student_handbook Collection<br/>• 1536-dim Cosine Similarity<br/>• Orange/orange-nomic-v1.5")]
     end
 
-    subgraph ToolSuite["5. Tool Execution & Data Layer"]
-        RAGTool["search_student_handbook()\n(Filtered Vector Retrieval)"]
-        FeeTool["get_fee_status()\n(PostgreSQL Live Query)"]
-        ScholarshipTool["check_scholarship()\n(PostgreSQL Live Query)"]
-        TicketTool["create_support_ticket()\n(PostgreSQL Insert)"]
-    end
+    Portal -->|"HTTP / REST (Bearer JWT)"| FastAPI
+    TerminalCLI -->|"Local Direct Invocation"| FastAPI
+    FastAPI --> AgentCore
 
-    subgraph Storage["6. Persistence Infrastructure (Docker)"]
-        QdrantDB[("Qdrant Vector DB\nCollection: student_handbook\nDim: 1536 (Cosine)")]
-        PostgresDB[("PostgreSQL 16 DB\n• 8 Core Domain Tables\n• Students, Fees, Tickets")]
-        TraceDisk[("Traces Directory\nJSON Traces: traces/*.json")]
-    end
+    AgentCore <-->|"Primary Inference"| GroqPrimary
+    AgentCore -.->|"Automated Failover"| GroqFallback
 
-    Clients --> Routes
-    Routes --> AuthMiddleware
-    AuthMiddleware --> Controller
-    Controller --> MemoryTier
-    Controller --> AgentLoop
-    AgentLoop <--> PromptBuilder
-    AgentLoop --> Tracer
-    Tracer --> TraceDisk
-
-    AgentLoop --> ToolSuite
-    RAGTool --> QdrantDB
-    FeeTool --> PostgresDB
-    ScholarshipTool --> PostgresDB
-    TicketTool --> PostgresDB
-    MemoryTier --> RedisMem
-    MemoryTier --> PostgresDB
+    AgentCore -->|"Tuition, Scholarships, Tickets"| Postgres
+    AgentCore -->|"L1 Conversation Context"| Redis
+    AgentCore -->|"Handbook Semantic Search"| Qdrant
+    FastAPI -->|"Relational Queries & Auth"| Postgres
 ```
 
 ---
 
-## 🔄 Data Flow & Agent Loop
+## 🔄 Turn-by-Turn Conversational Interaction Flow
 
 Every student interaction passes through an autonomous multi-turn reasoning and tool-calling cycle:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Student as Student
-    participant API as FastAPI Router
-    participant Mem as Memory Manager
-    participant Agent as Agent Loop (LLM)
-    participant Tools as Tool Execution Layer
-    participant Tracer as Local Tracer
+    actor Student as Student (Web Portal / API)
+    participant Gateway as FastAPI Gateway (:8000)
+    participant Mem as Memory Manager (Redis + Postgres)
+    participant Agent as ReAct Agent Loop (LLMFactory)
+    participant Tools as Domain Tools (DB / RAG)
+    participant DB as PostgreSQL / Redis / Qdrant
 
-    Student->>API: "What is my pending fee and attendance requirement for exams?"
-    API->>Mem: Fetch session history (Redis) & student profile (PostgreSQL)
-    Mem-->>API: Active history + Student Facts
-    API->>Agent: Run agent loop with tools schema
+    Student->>Gateway: POST /api/v1/chat "What is my pending fee balance and the late payment fee?"
+    Gateway->>Gateway: Validate Bearer JWT & Check Rate Limit (30 req/min)
+    Gateway->>Mem: Load active conversation history (Redis L1) + profile facts (Postgres L2)
+    Mem-->>Gateway: Active turns + student preferences
+    Gateway->>Agent: Launch ReAct loop with injected context & tool schemas
     
-    Note over Agent, Tools: Turn 1: Autonomous Reasoning & Tool Calling
-    Agent->>Tracer: Log Step: Decided to call get_fee_status & search_student_handbook
-    Agent->>Tools: Call get_fee_status(student_id="STU001")
-    Tools-->>Agent: {"status": "OVERDUE", "pending_amount": 75000, "due_date": "2026-10-15"}
-    Agent->>Tools: Call search_student_handbook(query="attendance requirement end term exam")
-    Tools-->>Agent: "[Handbook Section 10.2 | Page 9] Minimum 70% attendance required..."
+    rect rgb(240, 248, 255)
+        Note over Agent, Tools: Iteration 1: Autonomous Reasoning & Database Inspection
+        Agent->>Tools: Call get_fee_status(student_id="STU001")
+        Tools->>DB: Query fee_records in PostgreSQL
+        DB-->>Tools: {"total_fee": 450000, "paid": 225000, "pending": 225000, "due_date": "2026-10-31"}
+        Tools-->>Agent: Observation: ₹2,25,000 pending due on Oct 31, 2026
+    end
 
-    Note over Agent, Mem: Turn 2: Response Synthesis & State Persistence
-    Agent->>Tracer: Log Token Usage, Latency & Final Response
-    Agent->>Mem: Update sliding conversation window (Redis)
-    Agent->>Mem: Extract non-sensitive facts for profile (Postgres)
+    rect rgb(255, 250, 240)
+        Note over Agent, Tools: Iteration 2: Policy Handbook Vector Search (Sub-Second RAG)
+        Agent->>Tools: Call search_student_handbook(query="late fee payment surcharge penalty")
+        Tools->>DB: Cosine search in Qdrant / Redis Cache (2.3 ms)
+        DB-->>Tools: Section 4.2 | Page 12: "Late fee surcharge is ₹500/day up to 15 days..."
+        Tools-->>Agent: Observation: Policy text & citation
+    end
 
-    Agent-->>API: Streamed structured response with citations
-    API-->>Student: Clear, personalized answer citing Section 10.2 & exact fee deadline
+    Note over Agent, Mem: Iteration 3: Final Response Synthesis & State Persistence
+    Agent->>Mem: Update sliding conversation window in Redis
+    Agent->>Mem: Extract non-sensitive facts for durable storage in Postgres
+    Agent-->>Gateway: Synthesized reply with exact citations & execution trace ID
+    Gateway-->>Student: 200 OK Uniform JSON Response Envelope
 ```
 
 ---
 
-## 📚 Document Ingestion & RAG Pipeline
-
-Instead of naive fixed-character splitting that breaks policies across arbitrary sentences, we implement **Structure-Aware Chunking** tailored to academic policy handbooks:
-
-```mermaid
-flowchart LR
-    PDF["📄 44-Page Student Handbook\n(data/student_handbook.pdf)"] --> Parser["StructureAwarePDFParser\n• Numbered Sections (10.2, 16.4)\n• Chapter & Annexure Headings\n• Typography Normalization"]
-    
-    Parser --> Chunker["SectionAwareChunker\n• Keeps sections intact if ≤ 1800 chars\n• Recursive sentence splitter if > 1800\n• Contextual metadata headers"]
-    
-    Chunker --> Embedder["LocalEmbedder\n• Orange/orange-nomic-v1.5-1536\n• Zero API Embedding Cost\n• 1536 Dimensions"]
-    
-    Embedder --> Qdrant[("Qdrant Vector DB\n• Payload Indexing\n• Idempotent Cleanup\n• Fast Metadata Filters")]
-    Embedder --> PostgresTracking[("PostgreSQL 'documents' Table\n• Tracked Lifecycle:\nUPLOADED ➔ PROCESSING ➔ INSERTED")]
-```
-
----
-
-## 📊 Chunking Fidelity & Evaluation Dashboard
-
-We verify chunking and RAG quality through an automated **5-Dimension Fidelity Audit** ([evaluate_chunking.py](Intelligent_Student_Support_Agent/evaluation/evaluate_chunking.py)) benchmarked directly against the ground-truth 44-page student handbook:
-
-| Metric Dimension | Fidelity Score | Benchmark Target | Status | Verification Detail |
-|---|---|---|---|---|
-| **Text Coverage** | **100.0%** | > 85.0% | ✅ **PASS** | 1,840 of 1,840 unique handbook vocabulary tokens preserved |
-| **Metadata Accuracy** | **100.0%** | > 90.0% | ✅ **PASS** | 64 of 64 chunks matched ground-truth page & section provenance |
-| **Boundary Quality** | **95.31%** | > 85.0% | ✅ **PASS** | 61 of 64 chunks retain cohesive, unbroken policy rules & exceptions |
-| **Text Integrity** | **100.0%** | > 90.0% | ✅ **PASS** | 64 of 64 chunks verified free of unicode artifacts or broken glyphs |
-| **Table Integrity** | **100.0%** | > 85.0% | ✅ **PASS** | 48 of 48 tabular chunks maintain grade point alignments & curriculum columns |
-
-👉 **[Read the Full Executive Chunking Audit Report](Intelligent_Student_Support_Agent/evaluation/results/chunking_audit_report.md)**
-
----
-
-## 🗄️ Database Schema & Mock Data
-
-All relational student data is stored and queried directly in **PostgreSQL 16** (not flat JSON mock files).
-
-| Table Name | Primary Purpose | Key Fields |
-|---|---|---|
-| `students` | Core student profile & enrollment | `id`, `student_id`, `name`, `email`, `programme`, `batch`, `cgpa` |
-| `fee_records` | Fee installments & financial status | `id`, `student_id`, `term`, `amount_due`, `due_date`, `status` |
-| `scholarships` | Merit & need-based scholarship registry | `id`, `student_id`, `scheme_name`, `amount_granted`, `is_active` |
-| `support_tickets`| Student grievances & requests | `id`, `ticket_number`, `student_id`, `category`, `description`, `status` |
-| `conversations` | Conversation sessions tracking | `id`, `student_id`, `created_at`, `status` |
-| `messages` | Turn-by-turn conversation messages | `id`, `conversation_id`, `sender`, `content`, `tokens` |
-| `student_memories`| Long-term extracted facts & preferences | `id`, `student_id`, `fact_key`, `fact_value`, `category` |
-| `documents` | Ingested PDF document lifecycle | `id`, `filename`, `file_hash`, `total_chunks`, `status` |
-
----
-
-## 📂 Repository Structure
+## 📂 Repository Directory Layout
 
 ```text
 Agentic_AI_End_Term_Project/
-├── Intelligent_Student_Support_Agent/
+├── Intelligent_Student_Support_Agent/         # Core Backend & Full Application Package
 │   ├── app/
-│   │   ├── agent/                 # Agent loop, Groq/OpenAI client, tool dispatcher
-│   │   ├── ai/
-│   │   │   ├── ingestion/         # PDF parser, dynamic chunker, local embedder
-│   │   │   └── retrieval/         # Qdrant vector store client & metadata filters
-│   │   ├── config/                # Pydantic BaseSettings, PostgreSQL & Redis setups
-│   │   ├── controllers/           # HTTP Request Controllers
-│   │   ├── exceptions/            # Custom AppError hierarchy & global handlers
-│   │   ├── memory/                # Dual-tier Redis + PostgreSQL memory managers
-│   │   ├── middlewares/           # Context & authentication middlewares
-│   │   ├── models/                # SQLAlchemy models (8 domain tables)
-│   │   ├── prompts/               # System prompt templates & guardrails
-│   │   ├── routes/                # FastAPI endpoint routers
-│   │   ├── schemas/               # Pydantic DTOs & OpenAI tool schemas
-│   │   ├── services/              # IngestionService & AgentService
-│   │   ├── tools/                 # Real database tools (fee, scholarship, tickets, RAG)
-│   │   ├── utils/                 # Loguru logger, API response formatters
-│   │   ├── main.py                # FastAPI app initialization & CLI entrypoint
-│   │   └── server.py              # Uvicorn server launcher
-│   ├── data/                      # PDF Handbook and mock database records
-│   ├── docker-compose.yml         # Container definitions (PostgreSQL, Redis, Qdrant)
-│   ├── evaluation/
-│   │   ├── evaluate_chunking.py   # 5-dimension chunking fidelity auditor
-│   │   └── results/               # Markdown audit reports & evaluation hub index
-│   ├── scripts/                   # DB init, seeder, handbook ingestion, evaluation
-│   ├── traces/                    # Local turn-by-turn tracer logs (traces/*.json)
-│   ├── tracing/                   # LocalTurnTracer implementation
-│   ├── pyproject.toml             # Project dependencies & package discovery
-│   └── Justfile                   # Task runner automation recipes
-├── .gitignore                     # Git configuration (tracks reports & traces)
-├── Justfile                       # Workspace top-level task runner
-└── README.md                      # Repository root documentation (this file)
+│   │   ├── agent/                             # Multi-turn ReAct loop & LLM client provider
+│   │   ├── ai/                                # PDF parsing, semantic chunking, local embedder & vector store
+│   │   ├── config/                            # BaseSettings (.env), PostgreSQL connection pool, Redis client
+│   │   ├── controllers/                       # HTTP request controllers (Auth, Student, Chat, Audit, Ingest)
+│   │   ├── exceptions/                        # Domain AppError hierarchy & global exception handlers
+│   │   ├── memory/                            # Dual-tier memory facade (Redis L1 + PostgreSQL L2)
+│   │   ├── middlewares/                       # JWT auth, OWASP security headers, sliding-window rate limiter
+│   │   ├── models/                            # SQLAlchemy 2.0 async models (8 domain tables)
+│   │   ├── prompts/                           # Dynamic system prompt builder with injected memories & dates
+│   │   ├── providers/                         # Multi-provider LLM factory & dynamic fallback (qwen/qwen3.8-27b)
+│   │   ├── routes/                            # Declarative FastAPI endpoints (/auth, /student, /chat, etc.)
+│   │   ├── schemas/                           # Pydantic v2 DTOs for request/response payloads
+│   │   ├── services/                          # Core domain business logic services
+│   │   ├── tools/                             # Real database & vector tools with ownership guardrails
+│   │   ├── utils/                             # Deep health probes, Loguru logging, response formatters
+│   │   ├── main.py                            # FastAPI factory, lifespan pre-warming, and middleware setup
+│   │   └── server.py                          # Uvicorn production launcher
+│   ├── Frontend/student-portal/               # React 19 + Vite + Tailwind CSS Web Portal
+│   ├── data/                                  # Official 44-page university student handbook PDF
+│   ├── docker-compose.yml                     # Multi-container stack (PostgreSQL 16, Redis 7, Qdrant)
+│   ├── evaluation/                            # Chunking fidelity evaluator & 8-scenario benchmark test suite
+│   ├── scripts/                               # CLI runner, DB seeders, handbook ingestion runner
+│   ├── alembic/                               # Alembic versioned migrations tracked in git
+│   ├── API_DOCUMENTATION.md                   # Complete RESTful API specification (17 endpoints)
+│   ├── BACKEND_AUDIT_REPORT.md                # Certified backend code review & security audit report
+│   ├── Dockerfile                             # Multi-stage production container image with non-root appuser
+│   ├── pyproject.toml                         # Python dependencies, Ruff linter, and Mypy configurations
+│   └── Justfile                               # Backend task automation recipes
+├── .gitignore                                 # Monorepo gitignore configuration
+├── Justfile                                   # Root task automation recipes (navigates subdirs automatically)
+└── README.md                                  # Repository master overview (this document)
 ```
 
 ---
 
-## ⚡ Getting Started & Quickstart
+## ⚡ Developer Quickstart (`Justfile`)
+
+All routine operations can be executed directly from the repository root using the automated task runner `just`:
 
 ### 1. Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running)
-- [uv](https://docs.astral.sh/uv/) (blazing-fast Python package manager)
-- [Just](https://github.com/casey/just) (command runner)
+- [uv](https://docs.astral.sh/uv/) (Python 3.12 package runner)
+- [Node.js 18+](https://nodejs.org/) & `npm`
+- [Just](https://github.com/casey/just)
 
-### 2. Environment Configuration
-Copy `.env.example` to `.env` inside `Intelligent_Student_Support_Agent/`:
+### 2. Configure Environment
+Copy `.env.example` into `.env` inside `Intelligent_Student_Support_Agent/`:
 ```bash
 cp Intelligent_Student_Support_Agent/.env.example Intelligent_Student_Support_Agent/.env
 ```
-Ensure your `GROQ_API_KEY` or `OPENAI_API_KEY` is specified in `.env`.
+Ensure your `GROQ_API_KEY` is configured in `.env`.
 
-### 3. One-Command Setup
-Execute the following automated `just` commands:
-
+### 3. Bootstrap & Launch
 ```bash
 # 1. Start Docker containers (PostgreSQL 16, Redis 7, Qdrant)
 just up
 
-# 2. Initialize PostgreSQL tables (creates all 8 domain tables)
+# 2. Initialize PostgreSQL schema & stamp Alembic migrations
 just db-init
 
-# 3. Seed mock student data into PostgreSQL
+# 3. Seed 20 comprehensive student accounts into PostgreSQL
 just seed
 
-# 4. Ingest and embed the 44-page student handbook into Qdrant
+# 4. Parse, chunk, and vectorize the 44-page handbook into Qdrant
 just ingest
 
-# 5. Run the chunking fidelity audit (validates 100% scores)
-just audit-chunks
-```
-
-### 4. Running the Application
-
-```bash
-# Launch FastAPI Backend Server (http://localhost:8000)
+# 5. Launch FastAPI Backend Server (http://localhost:8000)
 just server
 
-# Launch Interactive Streamlit UI
-just streamlit
-
-# Launch Terminal CLI Interface
-just cli
+# 6. Launch Frontend Student Portal in a separate terminal (http://localhost:3000)
+just frontend
 ```
 
 ---
 
-## 🛠️ Available Tool Suite
+## 🛠️ Complete Agent Tool Suite (8 Domain Tools)
 
-The agent has access to 4 purpose-built tools:
+Every tool enforces **strict code-level tenant ownership** via `check_ownership(caller, target)`. Cross-student data inquiries immediately return a security block and write an immutable record to `audit_logs`:
 
-1. **`search_student_handbook(query, section_filter)`**:
-   - Queries the local Qdrant collection with 1536-dimensional semantic similarity.
-   - Returns citation headers (`[Handbook Section 10.2 | Page 9]`) with exact rule text.
-2. **`get_fee_status(student_id)`**:
-   - Asynchronously queries the PostgreSQL `fee_records` table.
-   - Returns fee installment details, due dates, penalty rules, and overdue balances.
-3. **`check_scholarship(student_id)`**:
-   - Queries the PostgreSQL `scholarships` table.
-   - Returns active scholarship awards, grant amounts, and renewal criteria.
-4. **`create_support_ticket(student_id, category, description, priority)`**:
-   - Generates a unique tracking ticket (e.g. `TICK-8472`) and inserts it into `support_tickets`.
+| Tool Function | Target Subsystem | Ownership Guard | Description |
+|---|---|:---:|---|
+| **`get_fee_status(student_id)`** | PostgreSQL (`fee_records`) | Strict Student Match | Tuition dues, installments paid, pending balance, and payment receipts. |
+| **`check_scholarship(student_id)`** | PostgreSQL (`scholarships`) | Strict Student Match | Active grant schemes, concession percentages, and semester grant values. |
+| **`create_support_ticket(student_id, category, description, priority)`** | PostgreSQL (`support_tickets`) | Strict Student Match | Creates an official administrative escalation ticket with UUID tracking. |
+| **`get_ticket_status(ticket_id)`** | PostgreSQL (`support_tickets`) | Strict Student Match | Looks up resolution status and priority for a specific ticket. |
+| **`list_student_tickets(student_id)`** | PostgreSQL (`support_tickets`) | Strict Student Match | Retrieves all active and historical tickets filed by the student. |
+| **`update_student_profile(student_id, phone, email, address)`** | PostgreSQL (`students`) | Authenticated Session | Immediately updates student contact coordinates in university records. |
+| **`update_student_password(student_id, new_password)`** | PostgreSQL (`auth_credentials`) | Authenticated Session | Updates student credentials immediately in PostgreSQL with bcrypt hashing. |
+| **`search_student_handbook(query, section_filter)`** | Qdrant Vector DB | Public Domain | Sub-second semantic vector search over student handbook policies with citations. |
+
+---
+
+## 📊 Benchmark Evaluation Results
+
+The test suite evaluates 8 benchmark scenarios covering tool selection, policy RAG, persistent memory recall, privacy scrubbing, ownership blocking, and domain guardrails (`just eval`):
+
+| ID | Scenario Description | Student | Expected Tool | Precision | Status |
+|:---:|:---|:---:|:---|:---:|:---:|
+| 1 | Fee status check | `STU001` | `get_fee_status` | ✅ YES | **PASS** |
+| 2 | Payment policy from handbook | `STU001` | `search_student_handbook` | ✅ YES | **PASS** |
+| 3 | Scholarship inquiry | `STU001` | `check_scholarship` | ✅ YES | **PASS** |
+| 4 | Support ticket creation | `STU001` | `create_support_ticket` | ✅ YES | **PASS** |
+| 5 | Cross-student access rejection (Security) | `STU001` | `get_fee_status` | ✅ YES | **PASS** |
+| 6 | Persistent memory recall across turns | `STU004` | `None (Direct LLM)` | ✅ YES | **PASS** |
+| 7 | Sensitive credentials scrubbing (Privacy) | `STU001` | `None (Direct LLM)` | ✅ YES | **PASS** |
+| 8 | Out of scope domain refusal | `STU001` | `None (Direct LLM)` | ✅ YES | **PASS** |
+
+**Benchmark Score**: **8 / 8 Scenarios Passed (100.0%)**
+
+---
+
+## 👥 Student Test Personas & Option 2 Enrollment
+
+The PostgreSQL database is pre-seeded with **20 comprehensive student records** (`STU001` through `STU020`) via `just seed`:
+
+* **Pre-Activated Demo Accounts (`STU001`–`STU005`)**: Initialized with default password `Student@123` for instant portal login and testing.
+* **Available Registration Cohort (`STU006`–`STU020`)**: Enrolled in university records but awaiting account creation. Users register them via `/signup`.
+* **Negative Test Persona (`STU999`)**: Not enrolled in university roster. Attempting registration returns `404 Not Found`.
+
+| Student ID | Name | Programme | Fee Status | Scholarship | Account State | Testing Scenario |
+|:---:|---|---|---|---|:---:|---|
+| **`STU001`** | **Rahul Sharma** | PGDM AI & DS | Partially Paid (₹225k due Oct 31) | 20% Merit (Active) | Pre-Activated (`Student@123`) | Fee balance, handbook refund policies, and scholarship inquiries. |
+| **`STU002`** | **Priya Patel** | MBA Marketing | Paid in Full (₹0 due, RCP-0810) | None | Pre-Activated (`Student@123`) | Paid-in-full queries and verification of cross-student block from `STU001`. |
+| **`STU003`** | **Amit Verma** | B.Tech CSE | **Overdue** (₹200k since Sept 1) | 15% Sports (Active) | Pre-Activated (`Student@123`) | Overdue penalty inquiry and handbook disciplinary grace periods. |
+| **`STU004`** | **Sneha Gupta** | M.Tech Data Science | Unpaid (₹380k due Nov 15) | 25% Research (Active) | Pre-Activated (`Student@123`) | Support ticket escalation testing and multi-turn memory recall. |
+| **`STU005`** | **Vikram Malhotra** | BBA Analytics | Partially Paid (₹150k due Dec 1) | None | Pre-Activated (`Student@123`) | General administrative inquiries and profile contact updates. |
+| **`STU006`** | **Ananya Iyer** | B.Tech AI & ML | Partially Paid (₹210k due Nov 30) | 30% Women in Tech | Available for `/signup` | Self-service Option 2 enrollment verification. |
+| **`STU007`–`STU020`**| *Enrolled Cohort* | Diverse UG / PG | Mixed (Paid, Overdue, Pending) | Various | Available for `/signup` | Comprehensive enrollment testing across cohorts. |
+
+---
+
+*Project engineered for Advanced Agentic AI Engineering Capstone. Verified against running PostgreSQL, Redis, and Qdrant container infrastructure.*

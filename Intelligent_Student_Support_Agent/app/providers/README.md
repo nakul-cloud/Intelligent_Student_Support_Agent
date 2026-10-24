@@ -25,43 +25,23 @@ app/providers/
 
 When an inference turn is initiated in the ReAct agent loop, `LLMFactory` executes the request against the configured primary model (`settings.groq_model`). If the primary model encounters a rate limit, service disruption, or failure, `LLMFactory` intercepts the error and automatically switches execution to the configured dynamic fallback model (`settings.groq_fallback_model` = `qwen/qwen3.8-27b`).
 
-```
-+-------------------------------------------------------------------------+
-|                              Agent Loop                                 |
-+-------------------------------------------------------------------------+
-                                     |
-                LLMFactory.create_completion_with_fallback(...)
-                                     |
-                                     v
-+-------------------------------------------------------------------------+
-|                               LLMFactory                                |
-+-------------------------------------------------------------------------+
-                                     |
-               1. Try Primary Model: settings.groq_model
-                                     |
-                                     v
-+-------------------------------------------------------------------------+
-|                              GroqProvider                               |
-|              (openai/gpt-oss-120b @ api.groq.com/openai/v1)              |
-+-------------------------------------------------------------------------+
-                   /                                   \
-             [Success]                               [Failure] (RateLimit, 503, Outage)
-                /                                       \
-               v                                         v
-       Return Completion                   Log Warning & Trigger Fallback
-                                                         |
-                                     2. Try Fallback: settings.groq_fallback_model
-                                                         |
-                                                         v
-                                           +----------------------------+
-                                           |        GroqProvider        |
-                                           |     (qwen/qwen3.8-27b)     |
-                                           +----------------------------+
-                                               /                    \
-                                          [Success]               [Error]
-                                             /                        \
-                                            v                          v
-                                     Return Completion        Raise Exhausted Error
+```mermaid
+flowchart TD
+    Agent["ReAct Agent Loop (agent_loop.py)"] --> Factory["LLMFactory.create_completion_with_fallback(...)<br/>(app/providers/llm/factory.py)"]
+
+    Factory --> TryPrimary["1. Invoke Primary Model<br/>• Provider: GroqProvider<br/>• Model: settings.groq_model<br/>• Endpoint: api.groq.com/openai/v1"]
+
+    TryPrimary --> PrimaryStatus{"Primary Response"}
+
+    PrimaryStatus -- "Success (200 OK)" --> ReturnPrimary["Return Completion to Agent<br/>• Standard OpenAI Completion DTO"]
+    PrimaryStatus -- "Failure<br/>(RateLimitError, 503, Timeout)" --> LogWarn["Log Warning & Telemetry<br/>• Switch to Dynamic Fallback Model"]
+
+    LogWarn --> TryFallback["2. Invoke Dynamic Fallback Model<br/>• Provider: GroqProvider<br/>• Model: settings.groq_fallback_model<br/>• Configured: qwen/qwen3.8-27b"]
+
+    TryFallback --> FallbackStatus{"Fallback Response"}
+
+    FallbackStatus -- "Success (200 OK)" --> ReturnFallback["Return Fallback Completion<br/>• Transparent to Agent ReAct Loop"]
+    FallbackStatus -- "Failure" --> Error["Raise Exception: All Providers Exhausted<br/>• Formats graceful error to student"]
 ```
 
 ---

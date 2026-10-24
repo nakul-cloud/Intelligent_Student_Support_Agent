@@ -6,35 +6,18 @@ The **Memory Layer** manages conversational state and long-term user preferences
 
 ## 🏗️ Dual-Tier Memory Architecture
 
-```
-[ User Prompt & Turn Interaction ]
-                │
-                ▼
-┌───────────────────────────────────────────────┐
-│     Tier 1: Redis Ephemeral Memory            │  <-- app/memory/redis_memory.py
-│  - Key: "conv:{conversation_id}"              │
-│  - TTL: 24 Hours                              │  Stores last 10 turns of raw turn-by-turn
-│  - Low latency sliding window                 │  dialogue for active context continuity.
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────┐
-│     Privacy & Sensitive Fact Redaction Gate   │  <-- app/memory/memory_manager.py
-├───────────────────────────────────────────────┤
-│ Blocks and scrubs sensitive categories:       │  Prevents private or confidential data
-│ - Medical / Health conditions                 │  from leaking into durable long-term storage.
-│ - Disciplinary records & active grievances    │
-│ - Passwords & authentication tokens           │
-│ - Bank accounts & financial balances          │
-└───────────────────────┬───────────────────────┘
-                        │ (Allowed non-sensitive facts only)
-                        ▼
-┌───────────────────────────────────────────────┐
-│     Tier 2: PostgreSQL Durable Memory Store   │  <-- app/memory/postgres_memory.py
-│  - Table: student_memory                      │
-│  - Idempotent upsert (on_conflict_do_update)  │  Persists student preferences, career goals,
-│  - Cross-session persistent recall            │  and academic focus across logins.
-└───────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Turn["User Prompt & Turn Interaction"] --> Tier1["Tier 1: Redis Ephemeral Memory (L1)<br/>• Key: 'conv:{conversation_id}'<br/>• TTL: 24 Hours<br/>• Low-latency sliding window for conversational continuity"]
+
+    Tier1 --> PrivacyGate{"Privacy & Redaction Gate<br/>(app/memory/memory_manager.py)"}
+
+    PrivacyGate -- "Sensitive Categories Detected<br/>• Passwords, PINs, OTPs, CVVs, tokens<br/>• Medical / Health conditions<br/>• Bank account & card numbers<br/>• Disciplinary / Legal grievances" --> Scrub["SCRUB & DISCARD<br/>Never written to persistent disk"]
+
+    PrivacyGate -- "Allowed Student Facts<br/>• Academic interests & goals<br/>• Preferred topics & study habits" --> Tier2[("Tier 2: PostgreSQL Durable Store (L2)<br/>• Table: 'student_memory'<br/>• Idempotent upsert via pg_insert<br/>• Long-term recall across sessions")]
+
+    Tier1 -.-> AgentContext["Injected into System Prompt Context"]
+    Tier2 -.-> AgentContext
 ```
 
 ---

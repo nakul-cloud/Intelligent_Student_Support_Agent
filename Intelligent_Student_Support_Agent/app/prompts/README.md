@@ -6,29 +6,28 @@ The **Prompts Layer** governs the persona, tone, institutional guardrails, forma
 
 ## 🏗️ Dynamic Prompt Assembly Flow
 
-```
-[ Active Student ID: e.g. STU001 ]
-                  │
-                  ▼
-┌───────────────────────────────────────────────┐
-│        Load Durable Profile Facts             │  <-- app/memory/postgres_memory.py
-│  - Career Goals: "AI & Data Science"          │
-│  - Preferred Track: "Machine Learning"        │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────┐
-│          build_system_prompt()                │  <-- app/prompts/system_prompt.py
-├───────────────────────────────────────────────┤
-│ 1. Injects Institutional Persona & Role       │
-│ 2. Sets Active Date Context (ISO timestamp)   │
-│ 3. Injects Student Identity & Durable Memories│
-│ 4. Declares Out-of-Scope Domain Refusals      │
-│ 5. Enforces Structured Citation Instructions  │
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-[ Injected into Groq LLM Turn Context as System Message ]
+```mermaid
+flowchart TD
+    ID["Active Student Identity<br/>(student_id = STU001)"] --> Memory["Load Durable Facts (app/memory/postgres_memory.py)<br/>• Career goals, preferences, academic interests"]
+    Time["System Clock<br/>(Current UTC / ISO Timestamp)"] --> Builder
+    Memory --> Builder["build_system_prompt() (system_prompt.py)"]
+
+    subgraph Directives["Prompt Assembly & Policy Directives"]
+        direction TB
+        Persona["1. Institutional Persona & Role Guidance"]
+        TimeContext["2. Real-Time Date & Semester Anchoring"]
+        Facts["3. Injected Student Demographic & Durable Facts"]
+        Refusal["4. Academic Scope Guardrails & Domain Refusals"]
+        Citations["5. Citation Directives: [Handbook Section X | Page Y]"]
+    end
+
+    Builder --> Persona
+    Builder --> TimeContext
+    Builder --> Facts
+    Builder --> Refusal
+    Builder --> Citations
+
+    Directives --> SystemMsg["Final Synthesized System Message<br/>Injected into LLM context before tool loop"]
 ```
 
 ---
