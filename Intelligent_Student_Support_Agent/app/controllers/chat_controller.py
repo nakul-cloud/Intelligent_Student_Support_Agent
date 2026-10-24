@@ -23,6 +23,7 @@ class ChatController:
         student_id: str,
         request: ChatRequest,
         session: AsyncSession,
+        request_id: Optional[str] = None,
     ):
         """Processes a chat turn with the AI support agent."""
         service = ChatService(session)
@@ -30,6 +31,7 @@ class ChatController:
             student_id=student_id,
             user_message=request.message,
             conversation_id=request.conversation_id,
+            request_id=request_id,
         )
         return success_response(
             status_code=status.HTTP_200_OK,

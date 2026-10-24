@@ -27,40 +27,62 @@ The application is structured following **Domain-Driven Design (DDD)** and **SOL
 
 ```mermaid
 flowchart TD
-    subgraph ClientTier["Client Gateway"]
-        Frontend["Frontend Student Portal (React 19 + Vite)<br/>http://localhost:3000"]
+    subgraph Client["Client Tier"]
+        Frontend["Student Portal (React 19)"]
     end
 
-    Frontend -->|"HTTP / REST API (JSON)"| Gateway
-
-    subgraph BackendGateway["FastAPI Application Gateway (Port 8000)"]
+    subgraph Backend["FastAPI Backend (:8000)"]
         direction TB
-        Gateway["1. Routes & Perimeter Middlewares<br/>• /api/v1 (auth, student, chat, audit, ingest, health)<br/>• OWASP Headers, CORS Restriction, Sliding-Window Rate Limiter"]
+        Routes["Routes & Middlewares"]
+        Controllers["Controllers"]
+        Services["Domain Services"]
+        AgentCore["ReAct Agent & Tools"]
 
-        Gateway --> Controllers["2. Controllers Layer (app/controllers/)<br/>• AuthController, StudentController, ChatController, etc.<br/>• Standard JSON Envelope formatting (success_response)"]
-
-        Controllers --> Services["3. Domain Services Layer (app/services/)<br/>• AuthService, StudentService, ChatService, AuditService<br/>• ApprovalService (Human-in-the-Loop sensitive gate)"]
-
-        Services --> Agent["4. Agentic Intelligence Core (app/agent/ & app/tools/)<br/>• ReAct Multi-Turn Loop (agent_loop.py)<br/>• LLMFactory with dynamic fallback (qwen/qwen3.8-27b)<br/>• fee, scholarship, ticket, profile, rag_tool"]
+        Routes --> Controllers
+        Controllers --> Services
+        Services --> AgentCore
     end
 
-    subgraph DataTier["Docker Infrastructure Layer"]
-        Postgres[("PostgreSQL 16 Container<br/>• Pure backend, zero SQLite fallback<br/>• 20 Student personas (STU001-STU020)<br/>• fee_records, scholarships, audit_logs")]
-        Redis[("Redis 7 Container<br/>• L1 Ephemeral sliding-window memory<br/>• Atomic rate-limiting counters & RAG cache")]
-        Qdrant[("Qdrant Vector DB Container<br/>• student_handbook dense collection<br/>• 1536-dim embeddings via Orange/orange-nomic-v1.5")]
+    subgraph Storage["Docker Storage Tier"]
+        Postgres[("PostgreSQL 16<br/>Relational Data & Memory L2")]
+        Redis[("Redis 7<br/>Cache, Rate Limits & Memory L1")]
+        Qdrant[("Qdrant<br/>Handbook Vector Store")]
     end
 
+    Frontend -->|HTTP / REST| Routes
     Services --> Postgres
     Services --> Redis
-    Agent --> Postgres
-    Agent --> Redis
-    Agent --> Qdrant
+    AgentCore --> Postgres
+    AgentCore --> Redis
+    AgentCore --> Qdrant
 ```
 
 > [!NOTE]
 > **Zero SQLite Fallback Policy**: The system connects exclusively to PostgreSQL (`postgresql+asyncpg://...`). If PostgreSQL is unreachable, the application fails fast with diagnostic startup messages, eliminating dual-database drift.
 
 ---
+
+## 🛠️ Technology Stack & System Components
+
+| Layer / Domain | Technology / Tool | Version / Model | Architectural Responsibility |
+|---|---|---|---|
+| **Frontend Portal** | React + Vite | React 19, Vite 5 | SPA student interface, interactive chat, dashboard tabs |
+| **Frontend Styling** | Tailwind CSS + Lucide | Tailwind 3, Lucide React | Modern responsive design system, reactive card layouts |
+| **API Gateway** | FastAPI + Uvicorn | FastAPI 0.115+, Uvicorn 0.28+ | High-throughput async REST endpoints, Pydantic v2 validation |
+| **Security & Identity** | PyJWT / Passlib / SlowAPI | HS256, bcrypt | Stateless JWT bearer tokens, sliding-window rate limiter |
+| **Agent Core** | ReAct Reasoning Loop | Native Python 3.12 | Autonomous multi-turn tool calling, ownership gatekeeper |
+| **Primary LLM** | Groq Cloud API | `openai/gpt-oss-120b` / `llama-3.3-70b` | High-speed multi-turn instruction & reasoning (<1s TTFT) |
+| **Fallback LLM** | Groq Cloud API | `qwen/qwen3.8-27b` | Dynamic failover provider on primary timeout or quota limits |
+| **Vector Store** | Qdrant Vector DB | Qdrant 1.8+ (Docker) | Cosine similarity vector search over 44-page handbook |
+| **Local Embedder** | SentenceTransformers | `Orange/orange-nomic-v1.5-1536` | 1536-dim embeddings with singleton cache (<0.01ms LRU) |
+| **Re-Ranker** | Cross-Encoder | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Two-stage deep semantic re-ranking on CPU with LRU cache |
+| **Relational Database** | PostgreSQL | PostgreSQL 16 (Docker) | Pure ACID store for students, fees, tickets, audit logs, memory L2 |
+| **Cache & State Store** | Redis | Redis 7 (Docker) | 24h sliding conversation memory (L1), rate limiters, RAG cache |
+| **Document Ingestion** | PyMuPDF (fitz) | PyMuPDF 1.23+ | Semantic chunking, heading detection, and page provenance |
+| **DevOps & Tasks** | Justfile / Docker | Docker Compose 3.8+ | One-command orchestration (`just up`, `just server`, `just frontend`) |
+
+---
+
 
 ## 📁 Module Documentation Index
 
@@ -113,30 +135,12 @@ The database is pre-seeded with **20 comprehensive student records** (`STU001` t
 
 The agent implements a privacy-first, dual-tier memory system:
 
-```
-[ User Prompt & Turn Interaction ]
-                │
-                ▼
-┌───────────────────────────────────────────────┐
-│     Tier 1: Redis Ephemeral Memory            │  <-- app/memory/redis_memory.py
-│  - Key: "conv:{conversation_id}"              │  Stores last 10 turns of active dialogue
-│  - TTL: 24 Hours                              │  for natural conversational continuity.
-└───────────────────────┬───────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────────────┐
-│     Privacy & Sensitive Fact Redaction Gate   │  <-- app/memory/memory_manager.py
-├───────────────────────────────────────────────┤
-│ Blocks: Medical conditions, grievances,       │  Prevents private or confidential data
-│ disciplinary cases, passwords, bank accounts  │  from leaking into durable long-term storage.
-└───────────────────────┬───────────────────────┘
-                        │ (Allowed non-sensitive facts only)
-                        ▼
-┌───────────────────────────────────────────────┐
-│     Tier 2: PostgreSQL Durable Memory Store   │  <-- app/memory/postgres_memory.py
-│  - Table: student_memory                      │  Persists student preferences, career goals,
-│  - Idempotent upsert via pg_insert            │  and academic focus across sessions.
-└───────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Prompt["User Turn"] --> Tier1["Tier 1: Redis Cache (L1)<br/>Active Dialogue (24h TTL)"]
+    Tier1 --> Gate{"Privacy Gate"}
+    Gate -- "Sensitive" --> Discard["Discard / Redact"]
+    Gate -- "Allowed Facts" --> Tier2[("Tier 2: PostgreSQL (L2)<br/>Durable Student Memory")]
 ```
 
 ---

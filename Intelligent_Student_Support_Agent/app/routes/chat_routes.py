@@ -6,7 +6,7 @@ Adheres strictly to SOLID Principles:
 """
 
 from uuid import UUID
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -27,14 +27,20 @@ router = APIRouter(prefix="/chat", tags=["Agent Chat"])
 )
 async def chat(
     request: ChatRequest,
+    raw_request: Request,
     student_id: str = Depends(get_current_student),
     session: AsyncSession = Depends(get_db),
 ):
     """Executes a multi-turn ReAct agent loop turn with two-tier memory, tools, and tracing."""
+    request_id = (
+        getattr(raw_request.state, "request_id", None)
+        or raw_request.headers.get("X-Request-ID")
+    )
     return await ChatController.send_message(
         student_id=student_id,
         request=request,
         session=session,
+        request_id=request_id,
     )
 
 

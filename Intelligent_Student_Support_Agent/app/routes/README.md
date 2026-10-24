@@ -32,16 +32,20 @@ The `app/routes` layer serves as the declarative HTTP gateway. Every incoming re
 
 ```mermaid
 flowchart TD
-    Client["Client Inbound Request"] --> SecHeaders["1. SecurityHeadersMiddleware<br/>• Inject X-Request-ID correlation ID<br/>• OWASP: nosniff, DENY, strict-origin"]
-    SecHeaders --> CORS["2. CORSMiddleware<br/>• Allowed origins: localhost:3000, 5173<br/>• Wildcard '*' blocked"]
-    CORS --> RateLimiter{"3. Rate Limiter<br/>(Redis Sliding Window)"}
+    Client["Client Request"] --> SecHeaders["Security Headers (X-Request-ID)"]
+    SecHeaders --> CORS["CORS Validation"]
+    CORS --> RateLimiter{"Rate Limiter"}
+
     RateLimiter -- "Exceeded" --> Err429["429 Too Many Requests"]
-    RateLimiter -- "Within Limit<br/>Chat: 30/min | Login: 20/min" --> AuthGuard{"4. Auth Guard<br/>(JWT Bearer)"}
-    AuthGuard -- "Invalid / Expired" --> Err401["401 Unauthorized"]
-    AuthGuard -- "Valid / Public" --> Validation{"5. Pydantic v2<br/>Payload Validation"}
-    Validation -- "Schema Invalid" --> Err422["422 Validation Error"]
-    Validation -- "Valid DTO" --> Controller["6. Controller & Domain Services<br/>• Route -> Controller -> Service<br/>• Code-Level Tenant Ownership Guard"]
-    Controller --> Response["Uniform JSON Response Envelope<br/>{status, message, data, request_id}"]
+    RateLimiter -- "Allowed" --> AuthGuard{"Auth Guard (JWT)"}
+
+    AuthGuard -- "Invalid" --> Err401["401 Unauthorized"]
+    AuthGuard -- "Valid" --> Validation{"Schema Validation"}
+
+    Validation -- "Invalid" --> Err422["422 Validation Error"]
+    Validation -- "Valid" --> Controller["Controller & Service"]
+
+    Controller --> Response["Uniform JSON Envelope"]
 ```
 
 ```mermaid

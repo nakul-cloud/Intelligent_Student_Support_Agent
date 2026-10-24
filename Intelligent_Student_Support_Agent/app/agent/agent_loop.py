@@ -95,8 +95,19 @@ async def run_agent(
 
         latency_ms = (time.perf_counter() - t_model_start) * 1000.0
 
+        is_fallback = getattr(response, "_is_fallback", False)
+        resp_model = getattr(response, "model", None) or (
+            settings.groq_fallback_model if is_fallback else settings.groq_model
+        )
+
         # Log LLM response metrics into the local tracer
-        tracer.log_model_call(turn=turn, response=response, latency_ms=latency_ms)
+        tracer.log_model_call(
+            turn=turn,
+            response=response,
+            latency_ms=latency_ms,
+            model=resp_model,
+            is_fallback=is_fallback,
+        )
 
         choice = response.choices[0]
         assistant_message = choice.message
@@ -147,6 +158,8 @@ async def run_agent(
                         args=tool_args,
                         result=tool_result,
                         latency_ms=0.0,
+                        status="error",
+                        guardrail_status="BLOCKED",
                     )
                     messages.append(
                         {
@@ -168,6 +181,8 @@ async def run_agent(
                         args=tool_args,
                         result=tool_result,
                         latency_ms=0.0,
+                        status="error",
+                        guardrail_status="BLOCKED",
                     )
                 else:
                     # Execute tool function and measure latency
@@ -187,14 +202,26 @@ async def run_agent(
 
                     tool_latency_ms = (time.perf_counter() - t_tool_start) * 1000.0
 
+                    # Evaluate guardrail status from observation output
+                    res_str = str(tool_result)
+                    res_lower = res_str.lower()
+                    guardrail_status = "ALLOWED"
+                    if "access denied" in res_lower or "blocked" in res_lower:
+                        guardrail_status = "BLOCKED"
+                    elif "pending_approval" in res_lower or "approval required" in res_lower or "action required" in res_lower:
+                        guardrail_status = "PENDING_APPROVAL"
+
                     # Log tool execution to tracer
                     tracer.log_tool_call(
                         turn=turn,
                         tool_name=fn_name,
                         args=tool_args,
-                        result=tool_result,
+                        result=res_str,
                         latency_ms=tool_latency_ms,
+                        status="error" if "Error executing tool" in res_str else "success",
+                        guardrail_status=guardrail_status,
                     )
+
 
                 # Append tool observation back to conversation history
                 messages.append(

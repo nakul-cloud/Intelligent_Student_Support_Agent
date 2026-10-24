@@ -8,22 +8,18 @@ The **Utils Layer** provides shared helper modules for ownership security enforc
 
 ```mermaid
 flowchart TD
-    Op["Application Operations & Request Flows"] --> Utils["Cross-Cutting Utilities (app/utils/)"]
+    App["Application Flows"] --> Utils["Utilities Layer"]
 
-    subgraph UtilModules["Specialized Utility Modules"]
-        direction TB
-        Ownership["ownership.py<br/>• check_ownership(caller, target)<br/>• Cross-student tenant boundary guard<br/>• Automatic audit logging on block"]
-        Security["security.py<br/>• hash_password(), verify_password()<br/>• bcrypt salted hashing & constant-time check"]
-        Response["response.py<br/>• success_response(), error_response()<br/>• Enforces uniform JSON envelopes with X-Request-ID"]
-        Health["health.py<br/>• check_system_health()<br/>• Probes PostgreSQL (SELECT 1), Redis (ping), Qdrant"]
-        Logger["logger.py<br/>• Loguru console + rotating file log<br/>• Structured JSON serialization for ELK/Datadog"]
+    subgraph Modules["Utility Suite"]
+        direction LR
+        Ownership["Ownership Guard"]
+        Security["Bcrypt Security"]
+        Response["Response Envelopes"]
+        Health["Health Probes"]
+        Logger["Structured Logger"]
     end
 
-    Utils --> Ownership
-    Utils --> Security
-    Utils --> Response
-    Utils --> Health
-    Utils --> Logger
+    Utils --> Modules
 ```
 
 ---

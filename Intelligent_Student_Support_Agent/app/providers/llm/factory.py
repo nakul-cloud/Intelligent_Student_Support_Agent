@@ -30,7 +30,12 @@ class FallbackChatCompletionsProxy:
         fallback = kwargs.pop("fallback_model", self.fallback_model)
 
         try:
-            return await self._raw.create(**kwargs)
+            resp = await self._raw.create(**kwargs)
+            try:
+                setattr(resp, "_is_fallback", False)
+            except Exception:
+                pass
+            return resp
         except Exception as primary_exc:
             if not fallback or primary_model == fallback:
                 raise primary_exc
@@ -42,7 +47,12 @@ class FallbackChatCompletionsProxy:
             fallback_kwargs = dict(kwargs)
             fallback_kwargs["model"] = fallback
             try:
-                return await self._raw.create(**fallback_kwargs)
+                resp = await self._raw.create(**fallback_kwargs)
+                try:
+                    setattr(resp, "_is_fallback", True)
+                except Exception:
+                    pass
+                return resp
             except Exception as fallback_exc:
                 logger.error(
                     f"LLMFactory: Fallback model '{fallback}' also failed ({type(fallback_exc).__name__}: {fallback_exc}). "
@@ -154,7 +164,12 @@ class LLMFactory:
 
         try:
             logger.info(f"LLMFactory: Executing turn completion using primary model '{primary}'...")
-            return await target_client.chat.completions.create(model=primary, **kwargs)
+            resp = await target_client.chat.completions.create(model=primary, **kwargs)
+            try:
+                setattr(resp, "_is_fallback", False)
+            except Exception:
+                pass
+            return resp
         except Exception as primary_exc:
             if not fallback or primary == fallback:
                 raise primary_exc
@@ -166,10 +181,16 @@ class LLMFactory:
             try:
                 fallback_kwargs = dict(kwargs)
                 fallback_kwargs["model"] = fallback
-                return await target_client.chat.completions.create(**fallback_kwargs)
+                resp = await target_client.chat.completions.create(**fallback_kwargs)
+                try:
+                    setattr(resp, "_is_fallback", True)
+                except Exception:
+                    pass
+                return resp
             except Exception as fallback_exc:
                 logger.error(
                     f"LLMFactory: Dynamic fallback model '{fallback}' also failed ({type(fallback_exc).__name__}: {fallback_exc}). "
                     f"Both primary ('{primary}') and fallback ('{fallback}') exhausted."
                 )
                 raise fallback_exc from primary_exc
+

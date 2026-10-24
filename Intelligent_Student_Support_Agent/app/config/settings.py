@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     chunk_target_chars: int = 1800
     chunk_overlap_chars: int = 200
 
+    # --- RAG Cross-Encoder Re-Ranker Configuration ---
+    reranker_enabled: bool = True
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_top_n: int = 15
+    reranker_top_k: int = 3
+    reranker_batch_size: int = 8
+    reranker_device: str = "cpu"
+
+
     # --- Relational Database (PostgreSQL Async) & Cache (Redis) ---
     database_url: str = (
         "postgresql+asyncpg://student_agent:student_agent_dev@localhost:5432/student_support_db"

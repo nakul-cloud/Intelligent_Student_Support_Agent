@@ -8,29 +8,26 @@ The **Agent Layer** manages the execution cycle of the AI Student Support Agent,
 
 ```mermaid
 flowchart TD
-    Start["Inbound Student Turn<br/>• User Query + Dual-Tier Memory Context"] --> Init["1. Initialize Turn Context<br/>• Assemble System Prompt & Student Facts<br/>• Bind AGENT_TOOLS Schemas<br/>• Initialize LocalTurnTracer"]
-    Init --> Infer["2. LLM Inference via LLMFactory<br/>• Primary Model: settings.groq_model<br/>• Fallback Model: settings.groq_fallback_model (qwen/qwen3.8-27b)"]
+    Start["User Prompt + Memory"] --> Context["System Prompt & Tool Schemas"]
+    Context --> LLM["LLM Inference<br/>(Groq / Qwen Fallback)"]
 
-    Infer --> Decision{"LLM Decision"}
+    LLM --> Action{"LLM Action"}
 
-    Decision -- "Emits Tool Calls" --> Dispatch["3. Tool Dispatcher (app/tools/)<br/>• check_ownership(caller, target)<br/>• fee, scholarship, ticket, or rag_tool"]
-    
-    Dispatch --> Gate{"Ownership & Action Gate"}
-    Gate -- "Cross-Student Access" --> Block["BLOCKED: Security Audit Log<br/>Observation: Access Denied"]
-    Gate -- "Sensitive Action" --> Suspend["SUSPEND: pending_approval = True<br/>Awaiting Student Confirmation"]
-    Gate -- "Allowed" --> ExecTool["Execute Tool against DB / Vector Store<br/>Format Observation String"]
+    Action -- "Tool Call" --> Gate{"Ownership & Action Gate"}
+    Gate -- "Violation" --> Block["Blocked (Audit Log)"]
+    Gate -- "Sensitive" --> Suspend["Pending Approval"]
+    Gate -- "Allowed" --> Exec["Execute Tool (DB / RAG)"]
 
-    Block --> ContextUpdate["Append Tool Observation to Messages"]
-    ExecTool --> ContextUpdate
-    ContextUpdate --> LoopGuard{"Iteration < max_turns (6)?"}
-    LoopGuard -- "Yes" --> Infer
-    LoopGuard -- "Max Turns Reached" --> FinalFallback["Synthesize Best-Effort Explanation"]
+    Block --> Next["Append Observation"]
+    Suspend --> Next
+    Exec --> Next
 
-    Decision -- "Emits Text Answer" --> Citations["4. Citation & Output Processing<br/>• Match Page & Section Provenance<br/>• Extract Non-Sensitive Facts for Memory"]
-    FinalFallback --> Citations
-    Suspend --> Citations
+    Next --> Check{"Turns < Max?"}
+    Check -- "Yes" --> LLM
+    Check -- "No" --> Finalize["Synthesize Response"]
 
-    Citations --> Result["5. Return ChatResponse<br/>• message, conversation_id, trace_id<br/>• facts_learned, pending_approval, trace metrics"]
+    Action -- "Text Answer" --> Finalize
+    Finalize --> Response["ChatResponse & Citations"]
 ```
 
 ---

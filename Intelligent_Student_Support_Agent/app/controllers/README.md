@@ -8,31 +8,21 @@ The **Controllers Layer** serves as the mediation and dispatch boundary between 
 
 ```mermaid
 flowchart TD
-    Req["Inbound HTTP Request"] --> Routes["FastAPI Routes Layer<br/>• Pydantic DTO Validation<br/>• Bearer JWT Extraction (student_id)"]
-    Routes -->|"DTO + student_id + AsyncSession"| Controllers["Controllers Layer (app/controllers/)"]
+    Req["HTTP Request"] --> Routes["FastAPI Routes"]
+    Routes --> Controllers["Controller Layer"]
 
-    subgraph ControllersGroup["Controller Specialization (Single Responsibility)"]
-        direction TB
-        AuthCtrl["AuthController<br/>• signup(), login(), change_password()"]
-        StudentCtrl["StudentController<br/>• get_profile(), get_fees(), get_tickets()"]
-        ChatCtrl["ChatController<br/>• send_message(), list_conversations()"]
-        AuditCtrl["AuditController<br/>• get_logs(), get_summary()"]
-        IngestCtrl["IngestionController<br/>• ingest_document()"]
+    subgraph Handlers["Specialized Controllers"]
+        direction LR
+        Auth["Auth"]
+        Student["Student"]
+        Chat["Chat"]
+        Audit["Audit"]
+        Ingest["Ingest"]
     end
 
-    Controllers --> AuthCtrl
-    Controllers --> StudentCtrl
-    Controllers --> ChatCtrl
-    Controllers --> AuditCtrl
-    Controllers --> IngestCtrl
-
-    AuthCtrl --> Services["Domain Services Layer (app/services/)<br/>• AuthService, StudentService, ChatService, etc."]
-    StudentCtrl --> Services
-    ChatCtrl --> Services
-    AuditCtrl --> Services
-    IngestCtrl --> Services
-
-    Services --> Envelope["Uniform JSON Response Envelope<br/>• success_response(status_code, message, data)<br/>• Standard: {status, message, data, request_id}"]
+    Controllers --> Handlers
+    Handlers --> Services["Domain Services"]
+    Services --> Envelope["Uniform JSON Envelope"]
 ```
 
 ---

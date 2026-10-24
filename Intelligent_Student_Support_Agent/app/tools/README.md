@@ -8,38 +8,24 @@ The **Tools Layer** contains executable Python functions that the conversational
 
 ```mermaid
 flowchart TD
-    Call["LLM Emits Tool Call<br/>e.g. get_fee_status(student_id='STU001')"] --> Guard{"Ownership Guardrail Gatekeeper<br/>check_ownership(caller, target)"}
+    Call["Tool Call"] --> Guard{"Ownership Check"}
 
-    Guard -- "caller != target<br/>(Cross-Student Access)" --> Blocked["BLOCKED: Access Denied<br/>• Log immutable event to audit_logs<br/>• Return rejection string to LLM context"]
+    Guard -- "Mismatch" --> Blocked["Blocked (Audit Log)"]
+    Guard -- "Allowed" --> Suite
 
-    Guard -- "caller == target<br/>(Allowed)" --> Allowed["ALLOWED: Target Tool Execution"]
-
-    subgraph ToolSuite["Executable Domain Tools Layer (app/tools/)"]
-        direction TB
-        Fee["fee_tool.py<br/>• Query fee_records in PostgreSQL<br/>• Total, paid, pending dues, receipt"]
-        Schol["scholarship_tool.py<br/>• Query scholarships in PostgreSQL<br/>• Award type, percentage, semester grant"]
-        Ticket["ticket_tool.py<br/>• Insert / query support_tickets<br/>• Automatic ticket UUID generation"]
-        Profile["profile_tool.py<br/>• Update contact phone, email, address<br/>• Atomic commit in PostgreSQL"]
-        Auth["auth_tool.py<br/>• Update student password in DB<br/>• Immediate bcrypt rehash"]
-        RAG["rag_tool.py (Sub-Second RAG)<br/>• Qdrant Vector DB Cosine Similarity<br/>• RAM pre-warmed + 24h Redis Cache"]
+    subgraph Suite["Tool Suite"]
+        direction LR
+        Fee["Fee Tool"]
+        Schol["Scholarship"]
+        Ticket["Ticket Tool"]
+        Profile["Profile Tool"]
+        Auth["Auth Tool"]
+        RAG["RAG Search"]
     end
 
-    Allowed --> Fee
-    Allowed --> Schol
-    Allowed --> Ticket
-    Allowed --> Profile
-    Allowed --> Auth
-    Allowed --> RAG
-
-    Fee --> Obs["Format String Observation"]
-    Schol --> Obs
-    Ticket --> Obs
-    Profile --> Obs
-    Auth --> Obs
-    RAG --> Obs
+    Suite --> Obs["Format Observation"]
     Blocked --> Obs
-
-    Obs --> Return["Append Observation to Context & Return to Agent ReAct Loop"]
+    Obs --> Return["Return to Agent Context"]
 ```
 
 ---
@@ -53,7 +39,7 @@ flowchart TD
 | [`ticket_tool.py`](./ticket_tool.py) | `create_support_ticket`, `get_ticket_status`, `list_student_tickets` | PostgreSQL (`support_tickets`) | Creates official support/escalation tickets and looks up resolution statuses. |
 | [`profile_tool.py`](./profile_tool.py) | `update_student_profile` | PostgreSQL (`students`) | Updates student contact details (phone, email, campus hostel address) directly. |
 | [`auth_tool.py`](./auth_tool.py) | `update_student_password` | PostgreSQL (`auth_credentials`) | Allows students to change their portal login password immediately in the database. |
-| [`rag_tool.py`](./rag_tool.py) | `search_student_handbook` | Qdrant Vector DB | Performs dense semantic vector search over student handbook policy chunks. |
+| [`rag_tool.py`](./rag_tool.py) | `search_student_handbook` | Qdrant Vector DB & CrossEncoder | Two-stage retrieval: Qdrant vector search + CrossEncoder (`ms-marco-MiniLM-L-6-v2`) re-ranking with 24h Redis cache. |
 
 ---
 

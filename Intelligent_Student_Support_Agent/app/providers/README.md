@@ -27,21 +27,16 @@ When an inference turn is initiated in the ReAct agent loop, `LLMFactory` execut
 
 ```mermaid
 flowchart TD
-    Agent["ReAct Agent Loop (agent_loop.py)"] --> Factory["LLMFactory.create_completion_with_fallback(...)<br/>(app/providers/llm/factory.py)"]
+    Agent["Agent Loop"] --> Factory["LLMFactory"]
+    Factory --> Primary["Primary Model<br/>(settings.groq_model)"]
 
-    Factory --> TryPrimary["1. Invoke Primary Model<br/>• Provider: GroqProvider<br/>• Model: settings.groq_model<br/>• Endpoint: api.groq.com/openai/v1"]
+    Primary --> Check{"Status"}
+    Check -- "Success" --> Return["Return Completion"]
+    Check -- "Error / RateLimit" --> Fallback["Dynamic Fallback<br/>(qwen/qwen3.8-27b)"]
 
-    TryPrimary --> PrimaryStatus{"Primary Response"}
-
-    PrimaryStatus -- "Success (200 OK)" --> ReturnPrimary["Return Completion to Agent<br/>• Standard OpenAI Completion DTO"]
-    PrimaryStatus -- "Failure<br/>(RateLimitError, 503, Timeout)" --> LogWarn["Log Warning & Telemetry<br/>• Switch to Dynamic Fallback Model"]
-
-    LogWarn --> TryFallback["2. Invoke Dynamic Fallback Model<br/>• Provider: GroqProvider<br/>• Model: settings.groq_fallback_model<br/>• Configured: qwen/qwen3.8-27b"]
-
-    TryFallback --> FallbackStatus{"Fallback Response"}
-
-    FallbackStatus -- "Success (200 OK)" --> ReturnFallback["Return Fallback Completion<br/>• Transparent to Agent ReAct Loop"]
-    FallbackStatus -- "Failure" --> Error["Raise Exception: All Providers Exhausted<br/>• Formats graceful error to student"]
+    Fallback --> FallbackCheck{"Status"}
+    FallbackCheck -- "Success" --> Return
+    FallbackCheck -- "Error" --> Fail["Raise Error"]
 ```
 
 ---

@@ -8,20 +8,17 @@ The **Middlewares Layer** provides perimeter security, request correlation, rate
 
 ```mermaid
 flowchart TD
-    Req["Client HTTP Request<br/>• Method, Path, Headers"] --> SecHeaders["1. SecurityHeadersMiddleware (security_headers.py)<br/>• Extracts / injects UUIDv4 X-Request-ID correlation token<br/>• Sets OWASP headers: nosniff, DENY, strict-origin"]
+    Req["HTTP Request"] --> SecHeaders["Security Headers & X-Request-ID"]
+    SecHeaders --> RateLimiter{"Rate Limiter"}
 
-    SecHeaders --> RateLimiter{"2. rate_limiter Dependency (rate_limiter.py)<br/>Redis sliding-window atomic counter"}
+    RateLimiter -- "Exceeded" --> Err429["429 Too Many Requests"]
+    RateLimiter -- "Allowed" --> AuthCheck{"Endpoint Type"}
 
-    RateLimiter -- "Threshold Exceeded" --> Err429["Raise 429 Too Many Requests<br/>(Includes X-Request-ID in error body)"]
-    RateLimiter -- "Within Limit<br/>Chat: 30/min | Login: 20/min" --> RouteType{"Endpoint Auth Guard"}
+    AuthCheck -- "Public" --> Handler["Route Handler"]
+    AuthCheck -- "Protected" --> JWT["JWT Verification"]
 
-    RouteType -- "Public Endpoint<br/>(/signup, /login, /health)" --> Handler["Dispatch to Route Handler"]
-
-    RouteType -- "Protected Endpoint<br/>(Bearer JWT Required)" --> AuthGuard["3. get_current_student (auth.py)<br/>• Extract Bearer token from Authorization header<br/>• Decode HS256 JWT using settings.jwt_secret"]
-
-    AuthGuard --> TokenVerify{"Token Verification"}
-    TokenVerify -- "Expired or Invalid Signature" --> Err401["Raise AuthenticationError<br/>(HTTP 401 Unauthorized)"]
-    TokenVerify -- "Valid Token" --> InjectUser["Inject validated student_id (sub)<br/>into route parameter"]
+    JWT -- "Valid" --> InjectUser["Inject student_id"]
+    JWT -- "Invalid" --> Err401["401 Unauthorized"]
 
     InjectUser --> Handler
 ```

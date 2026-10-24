@@ -190,6 +190,58 @@ class QdrantVectorStore:
         )
         return retrieved
 
+    def search_with_rerank(
+        self,
+        query_vector: list[float],
+        query_text: str,
+        top_n: Optional[int] = None,
+        top_k: Optional[int] = None,
+        similarity_threshold: Optional[float] = None,
+        metadata_filters: Optional[dict[str, Any]] = None,
+        reranker: Optional[Any] = None,
+    ) -> list[dict[str, Any]]:
+        """Perform two-stage retrieval: bi-encoder vector search for top_n candidates, then cross-encoder re-ranking.
+
+        Args:
+            query_vector: 1536-dimensional query embedding vector.
+            query_text: Raw natural language query for cross-encoder joint scoring.
+            top_n: Number of candidates to retrieve from Qdrant. Defaults to settings.reranker_top_n.
+            top_k: Final number of re-ranked chunks to return. Defaults to settings.reranker_top_k.
+            similarity_threshold: Minimum cosine similarity threshold for initial candidates.
+            metadata_filters: Optional metadata filters.
+            reranker: Optional CrossEncoderReranker instance. If None, instantiates default.
+
+        Returns:
+            List of top_k re-ranked chunks with updated relevance scores.
+        """
+        n = top_n or settings.reranker_top_n
+        k = top_k or settings.reranker_top_k
+
+        # 1. Fetch initial candidate pool from Qdrant
+        candidates = self.search(
+            query_vector=query_vector,
+            top_k=n,
+            similarity_threshold=similarity_threshold,
+            metadata_filters=metadata_filters,
+        )
+
+        if not candidates:
+            return []
+
+        # If re-ranking is disabled in settings, return top_k candidates directly
+        if not settings.reranker_enabled:
+            return candidates[:k]
+
+        # 2. Re-rank candidates using CrossEncoderReranker
+        try:
+            if reranker is None:
+                from app.ai.retrieval.reranker import CrossEncoderReranker
+                reranker = CrossEncoderReranker()
+            return reranker.rerank(query=query_text, candidates=candidates, top_k=k)
+        except Exception as exc:
+            logger.warning(f"VectorStore: Re-ranking encountered an issue ({exc}). Returning raw candidates.")
+            return candidates[:k]
+
     def fetch_by_metadata(self, filters: dict[str, Any], limit: int = 10) -> list[dict[str, Any]]:
         """Scroll collection by exact metadata match without vector query."""
         query_filter = self.build_metadata_filter(filters)

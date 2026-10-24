@@ -33,85 +33,101 @@ The workspace implements a decoupled, modern multi-tier topology separating the 
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer["1. Client Presentation Tier"]
-        Portal["Web Student Portal<br/>(React 19 + Vite + Tailwind CSS)<br/>http://localhost:3000"]
-        TerminalCLI["Terminal CLI Agent<br/>(scripts/cli.py)<br/>just cli"]
+    subgraph Client["Client Tier"]
+        Portal["Student Portal (React 19)"]
+        CLI["Terminal CLI (cli.py)"]
     end
 
-    subgraph GatewayLayer["2. Backend Application Gateway (Port 8000)"]
-        FastAPI["FastAPI REST Application Gateway<br/>(Intelligent_Student_Support_Agent/app/)<br/>• Declarative RESTful Routes & Pydantic v2 DTOs<br/>• OWASP Security Headers (nosniff, DENY)<br/>• Sliding-Window Rate Limiter (Chat: 30/min, Login: 20/min)<br/>• HS256 JWT Authentication & Tenant Ownership Guard"]
-        
-        AgentCore["ReAct Conversational Agent Core<br/>• Multi-turn reasoning loop (agent_loop.py)<br/>• LLMFactory dynamic fallback orchestrator<br/>• Local execution tracer (traces/*.json)"]
+    subgraph Gateway["Backend Gateway (:8000)"]
+        FastAPI["FastAPI REST Gateway"]
+        AgentCore["ReAct Agent Core"]
     end
 
-    subgraph CloudAI["3. External AI Model Inference"]
-        GroqPrimary["Primary Groq Model<br/>(llama-3.3-70b-versatile / gpt-oss-120b)"]
-        GroqFallback["Dynamic Fallback Model<br/>(qwen/qwen3.8-27b)"]
+    subgraph Models["LLM Inference (Groq)"]
+        Primary["Primary Model (GPT-OSS / Llama 3.3)"]
+        Fallback["Dynamic Fallback (Qwen 2.5 32B)"]
     end
 
-    subgraph DataLayer["4. Containerized Persistence Infrastructure (Docker)"]
-        Postgres[("PostgreSQL 16 DB<br/>• students, auth_credentials<br/>• fee_records, scholarships<br/>• support_tickets, audit_logs<br/>• Durable student_memory (L2)")]
-        Redis[("Redis 7 Cache<br/>• L1 Sliding Window Memory<br/>• Sliding-Window Rate Limit Keys<br/>• Sub-Second RAG Query Cache")]
-        Qdrant[("Qdrant Vector DB<br/>• student_handbook Collection<br/>• 1536-dim Cosine Similarity<br/>• Orange/orange-nomic-v1.5")]
+    subgraph Storage["Storage Layer (Docker)"]
+        Postgres[("PostgreSQL 16<br/>Relational DB & Memory L2")]
+        Redis[("Redis 7<br/>Cache, Rate Limits & Memory L1")]
+        Qdrant[("Qdrant<br/>Handbook Vector Store")]
     end
 
-    Portal -->|"HTTP / REST (Bearer JWT)"| FastAPI
-    TerminalCLI -->|"Local Direct Invocation"| FastAPI
+    Portal -->|REST / JWT| FastAPI
+    CLI --> FastAPI
     FastAPI --> AgentCore
 
-    AgentCore <-->|"Primary Inference"| GroqPrimary
-    AgentCore -.->|"Automated Failover"| GroqFallback
+    AgentCore <-->|Primary| Primary
+    AgentCore -.->|Failover| Fallback
 
-    AgentCore -->|"Tuition, Scholarships, Tickets"| Postgres
-    AgentCore -->|"L1 Conversation Context"| Redis
-    AgentCore -->|"Handbook Semantic Search"| Qdrant
-    FastAPI -->|"Relational Queries & Auth"| Postgres
+    AgentCore --> Postgres
+    AgentCore --> Redis
+    AgentCore --> Qdrant
+    FastAPI --> Postgres
 ```
 
 ---
 
-## 🔄 Turn-by-Turn Conversational Interaction Flow
-
-Every student interaction passes through an autonomous multi-turn reasoning and tool-calling cycle:
+## 🔄 Conversational Interaction Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Student as Student (Web Portal / API)
+    actor Student as Student (Portal / CLI)
     participant Gateway as FastAPI Gateway (:8000)
     participant Mem as Memory Manager (Redis + Postgres)
-    participant Agent as ReAct Agent Loop (LLMFactory)
+    participant Agent as ReAct Agent Loop
     participant Tools as Domain Tools (DB / RAG)
     participant DB as PostgreSQL / Redis / Qdrant
 
-    Student->>Gateway: POST /api/v1/chat "What is my pending fee balance and the late payment fee?"
-    Gateway->>Gateway: Validate Bearer JWT & Check Rate Limit (30 req/min)
-    Gateway->>Mem: Load active conversation history (Redis L1) + profile facts (Postgres L2)
-    Mem-->>Gateway: Active turns + student preferences
-    Gateway->>Agent: Launch ReAct loop with injected context & tool schemas
+    Student->>Gateway: POST /api/v1/chat (Prompt)
+    Gateway->>Gateway: Rate Limit & Bearer JWT Check
+    Gateway->>Mem: Load History (Redis L1) + Facts (Postgres L2)
+    Mem-->>Gateway: Injected Context
+    Gateway->>Agent: Run ReAct Loop with Tools
     
     rect rgb(240, 248, 255)
-        Note over Agent, Tools: Iteration 1: Autonomous Reasoning & Database Inspection
-        Agent->>Tools: Call get_fee_status(student_id="STU001")
+        Agent->>Tools: Call get_fee_status(student_id)
         Tools->>DB: Query fee_records in PostgreSQL
-        DB-->>Tools: {"total_fee": 450000, "paid": 225000, "pending": 225000, "due_date": "2026-10-31"}
-        Tools-->>Agent: Observation: ₹2,25,000 pending due on Oct 31, 2026
+        DB-->>Tools: Ledger Data
+        Tools-->>Agent: Observation: Pending Fee Status
     end
 
     rect rgb(255, 250, 240)
-        Note over Agent, Tools: Iteration 2: Policy Handbook Vector Search (Sub-Second RAG)
-        Agent->>Tools: Call search_student_handbook(query="late fee payment surcharge penalty")
-        Tools->>DB: Cosine search in Qdrant / Redis Cache (2.3 ms)
-        DB-->>Tools: Section 4.2 | Page 12: "Late fee surcharge is ₹500/day up to 15 days..."
-        Tools-->>Agent: Observation: Policy text & citation
+        Agent->>Tools: Call search_student_handbook(query)
+        Tools->>DB: Qdrant Search + Cross-Encoder Re-Rank
+        DB-->>Tools: Top Policy Excerpts
+        Tools-->>Agent: Observation: Cited Policy Text
     end
 
-    Note over Agent, Mem: Iteration 3: Final Response Synthesis & State Persistence
-    Agent->>Mem: Update sliding conversation window in Redis
-    Agent->>Mem: Extract non-sensitive facts for durable storage in Postgres
-    Agent-->>Gateway: Synthesized reply with exact citations & execution trace ID
-    Gateway-->>Student: 200 OK Uniform JSON Response Envelope
+    Agent->>Mem: Save Ephemeral Turns (Redis L1)
+    Agent->>Mem: Persist Allowed Facts (Postgres L2)
+    Agent-->>Gateway: Final Answer + Citations
+    Gateway-->>Student: 200 OK JSON Envelope
 ```
+
+---
+
+## 🛠️ Technology Stack & System Components
+
+| Layer / Domain | Technology / Tool | Version / Model | Architectural Responsibility |
+|---|---|---|---|
+| **Frontend Portal** | React + Vite | React 19, Vite 5 | SPA student interface, interactive chat, dashboard tabs |
+| **Frontend Styling** | Tailwind CSS + Lucide | Tailwind 3, Lucide React | Modern responsive design system, reactive card layouts |
+| **API Gateway** | FastAPI + Uvicorn | FastAPI 0.115+, Uvicorn 0.28+ | High-throughput async REST endpoints, Pydantic v2 validation |
+| **Security & Identity** | PyJWT / Passlib / SlowAPI | HS256, bcrypt | Stateless JWT bearer tokens, sliding-window rate limiter |
+| **Agent Core** | ReAct Reasoning Loop | Native Python 3.12 | Autonomous multi-turn tool calling, ownership gatekeeper |
+| **Primary LLM** | Groq Cloud API | `openai/gpt-oss-120b` / `llama-3.3-70b` | High-speed multi-turn instruction & reasoning (<1s TTFT) |
+| **Fallback LLM** | Groq Cloud API | `qwen/qwen3.8-27b` | Dynamic failover provider on primary timeout or quota limits |
+| **Vector Store** | Qdrant Vector DB | Qdrant 1.8+ (Docker) | Cosine similarity vector search over 44-page handbook |
+| **Local Embedder** | SentenceTransformers | `Orange/orange-nomic-v1.5-1536` | 1536-dim embeddings with singleton cache (<0.01ms LRU) |
+| **Re-Ranker** | Cross-Encoder | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Two-stage deep semantic re-ranking on CPU with LRU cache |
+| **Relational Database** | PostgreSQL | PostgreSQL 16 (Docker) | Pure ACID store for students, fees, tickets, audit logs, memory L2 |
+| **Cache & State Store** | Redis | Redis 7 (Docker) | 24h sliding conversation memory (L1), rate limiters, RAG cache |
+| **Document Ingestion** | PyMuPDF (fitz) | PyMuPDF 1.23+ | Semantic chunking, heading detection, and page provenance |
+| **DevOps & Tasks** | Justfile / Docker | Docker Compose 3.8+ | One-command orchestration (`just up`, `just server`, `just frontend`) |
+
 
 ---
 

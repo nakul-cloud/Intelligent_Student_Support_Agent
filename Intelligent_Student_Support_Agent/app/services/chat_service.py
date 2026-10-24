@@ -7,6 +7,7 @@ Adheres strictly to SOLID Principles:
 - Security-by-Design: Wraps domain tools with authenticated student context.
 """
 
+import time
 from typing import Any, Callable, Dict, List, Optional
 from uuid import UUID
 from sqlalchemy import select
@@ -198,8 +199,9 @@ class ChatService:
         student_id: str,
         user_message: str,
         conversation_id: Optional[UUID] = None,
+        request_id: Optional[str] = None,
     ) -> ChatResponse:
-        """Executes a single conversational agent turn with memory and tools."""
+        """Executes a single conversational agent turn with memory, tools, and full telemetry."""
         # 1. Obtain or initialize conversation
         conversation = await self.get_or_create_conversation(
             student_id=student_id,
@@ -207,7 +209,16 @@ class ChatService:
             first_message=user_message,
         )
 
-        # 2. Persist user turn
+        # 2. Initialize Tracer with comprehensive correlation & student identity
+        tracer = Tracer(agent_name="StudentSupportAgent")
+        tracer.start(
+            user_query=user_message,
+            student_id=student_id,
+            conversation_id=str(conversation.id),
+            request_id=request_id,
+        )
+
+        # 3. Persist user turn
         user_turn = Message(
             conversation_id=conversation.id,
             role="user",
@@ -216,7 +227,7 @@ class ChatService:
         self.session.add(user_turn)
         await self.session.commit()
 
-        # 3. Load Prior Conversation History (excluding current user turn)
+        # 4. Load Prior Conversation History (excluding current user turn)
         history_stmt = (
             select(Message)
             .where(Message.conversation_id == conversation.id, Message.id != user_turn.id)
@@ -230,14 +241,31 @@ class ChatService:
             for turn in history_turns
         ]
 
-        # 4. Fetch Student Profile for prompt identity injection
+        # 5. Fetch Student Profile for prompt identity injection
         res_stu = await self.session.execute(select(Student).where(Student.student_id == student_id))
         student_rec = res_stu.scalar_one_or_none()
 
-        # 5. Load Two-Tier Student Memory (Redis -> PostgreSQL)
+        # 6. Load Two-Tier Student Memory (Redis L1 -> PostgreSQL L2)
+        t_mem_load = time.perf_counter()
         memory_context = await self.memory_manager.load_memory(student_id)
+        mem_load_ms = (time.perf_counter() - t_mem_load) * 1000.0
 
-        # 6. Build System Prompt with Authenticated Identity & Memory Context
+        mem_lines = [
+            line.strip("- ").strip()
+            for line in (memory_context or "").splitlines()
+            if line.strip().startswith("-")
+        ]
+        loaded_keys = [line.split(":")[0].strip() for line in mem_lines if ":" in line]
+        tracer.log_memory_event(
+            action="load",
+            student_id=student_id,
+            count=len(mem_lines),
+            keys=loaded_keys,
+            latency_ms=mem_load_ms,
+            details={"tier": "redis_or_postgres", "has_context": bool(memory_context)},
+        )
+
+        # 7. Build System Prompt with Authenticated Identity & Memory Context
         system_prompt = build_system_prompt(
             memory_context=memory_context,
             student_id=student_id,
@@ -246,12 +274,10 @@ class ChatService:
             batch=student_rec.batch if student_rec else None,
         )
 
-        # 7. Initialize Tracer and Contextual Tool Map
-        tracer = Tracer(agent_name="StudentSupportAgent")
+        # 8. Configure Contextual Domain Tool Map
         contextual_tools = self._build_contextual_tool_map(student_id)
-        client = get_async_groq_client()
 
-        # 8. Run Multi-Turn Agent Loop with Conversation History
+        # 9. Run Multi-Turn Agent Loop with Conversation History
         assistant_reply = await run_agent(
             user_query=user_message,
             system_prompt=system_prompt,
@@ -261,13 +287,6 @@ class ChatService:
             conversation_history=conversation_history,
         )
         trace_id = tracer.trace_id
-
-        # 9. Finalize Tracer metrics and capture execution trace
-        trace_data = tracer.finish()
-        trace_data["duration_ms"] = trace_data.get("total_latency_ms", 0.0)
-        trace_data["steps"] = trace_data.get("trace", [])
-        turn_steps = [s for s in trace_data["steps"] if s.get("type") in ("llm_turn", "tool_call")]
-        trace_data["turn_count"] = max(1, len(turn_steps))
 
         # 10. Persist Assistant Response
         assistant_turn = Message(
@@ -280,11 +299,24 @@ class ChatService:
         await self.session.commit()
 
         # 11. Two-Tier Memory Update: Extract and Persist Safe Facts
+        t_mem_save = time.perf_counter()
         combined_text = f"{user_message}\n{assistant_reply}"
         saved_facts = await self.memory_manager.save_memory(
             student_id=student_id, conversation_text=combined_text
         )
+        mem_save_ms = (time.perf_counter() - t_mem_save) * 1000.0
         facts_learned_keys = [f.fact_key for f in saved_facts]
+        tracer.log_memory_event(
+            action="save",
+            student_id=student_id,
+            count=len(saved_facts),
+            keys=facts_learned_keys,
+            latency_ms=mem_save_ms,
+            details={"facts": [{"key": f.fact_key, "val": f.fact_value} for f in saved_facts]},
+        )
+
+        # 12. Finalize Tracer metrics, render ASCII summary, and write JSON artifact
+        trace_data = tracer.finish()
 
         return ChatResponse(
             conversation_id=str(conversation.id),
@@ -302,6 +334,7 @@ class ChatService:
         message: str,
         conversation_id: Optional[UUID | str] = None,
         debug: bool = False,
+        request_id: Optional[str] = None,
     ) -> ChatResponse:
         """Alias for process_turn providing intuitive parameter naming."""
         conv_uuid = None
@@ -315,4 +348,5 @@ class ChatService:
             student_id=student_id,
             user_message=message,
             conversation_id=conv_uuid,
+            request_id=request_id,
         )

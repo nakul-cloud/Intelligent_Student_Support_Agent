@@ -8,26 +8,21 @@ The **Prompts Layer** governs the persona, tone, institutional guardrails, forma
 
 ```mermaid
 flowchart TD
-    ID["Active Student Identity<br/>(student_id = STU001)"] --> Memory["Load Durable Facts (app/memory/postgres_memory.py)<br/>• Career goals, preferences, academic interests"]
-    Time["System Clock<br/>(Current UTC / ISO Timestamp)"] --> Builder
-    Memory --> Builder["build_system_prompt() (system_prompt.py)"]
+    ID["Student ID"] --> Memory["Load Memory Facts"]
+    Time["System Clock"] --> Builder["System Prompt Builder"]
+    Memory --> Builder
 
-    subgraph Directives["Prompt Assembly & Policy Directives"]
-        direction TB
-        Persona["1. Institutional Persona & Role Guidance"]
-        TimeContext["2. Real-Time Date & Semester Anchoring"]
-        Facts["3. Injected Student Demographic & Durable Facts"]
-        Refusal["4. Academic Scope Guardrails & Domain Refusals"]
-        Citations["5. Citation Directives: [Handbook Section X | Page Y]"]
+    subgraph Directives["Prompt Assembly"]
+        direction LR
+        Persona["Persona"]
+        TimeContext["Date & Time"]
+        Facts["Memory Facts"]
+        Refusal["Scope Guardrails"]
+        Citations["Citation Rules"]
     end
 
-    Builder --> Persona
-    Builder --> TimeContext
-    Builder --> Facts
-    Builder --> Refusal
-    Builder --> Citations
-
-    Directives --> SystemMsg["Final Synthesized System Message<br/>Injected into LLM context before tool loop"]
+    Builder --> Directives
+    Directives --> SystemMsg["System Prompt Message"]
 ```
 
 ---
