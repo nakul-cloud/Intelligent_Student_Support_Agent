@@ -15,7 +15,7 @@
 
 ---
 
-## 💡 What Does This Project Do? (In Simple Words)
+## 💡 What Does This Project Do? 
 
 In traditional universities, students often face long administrative queues, delayed emails, or have to navigate dense 50-page handbook PDFs just to find basic information.
 
