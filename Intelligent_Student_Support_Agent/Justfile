@@ -2,7 +2,7 @@
 # Justfile - Intelligent Student Support Agent Task Automation
 # ==============================================================================
 
-set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
 
 # Default recipe: display help
 default:
@@ -39,8 +39,10 @@ ingest:
 server:
     uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Convenient alias for server
+# Convenient aliases for backend server
 backend: server
+run-backend: server
+run-server: server
 
 # Launch Streamlit development & testing UI
 streamlit:
@@ -53,26 +55,38 @@ cli:
 # --- Frontend Application Runtimes ---
 # Start React/Vite student portal frontend dev server (port 3000)
 frontend:
-    cd Frontend/student-portal; npm run dev
+    cd Frontend/student-portal; npm.cmd run dev
 
-# Convenient alias for frontend
+# Convenient aliases for frontend
 client: frontend
+run-frontend: frontend
+run-client: frontend
 
 # Install frontend npm dependencies
 frontend-install:
-    cd Frontend/student-portal; npm install
+    cd Frontend/student-portal; npm.cmd install
 
 # Build frontend production bundle
 frontend-build:
-    cd Frontend/student-portal; npm run build
+    cd Frontend/student-portal; npm.cmd run build
 
 # Preview built frontend production bundle
 frontend-preview:
-    cd Frontend/student-portal; npm run preview
+    cd Frontend/student-portal; npm.cmd run preview
 
 # Lint frontend codebase
 frontend-lint:
-    cd Frontend/student-portal; npm run lint
+    cd Frontend/student-portal; npm.cmd run lint
+
+# --- One-Click Full Stack Startup (Opens Backend & Frontend in Dedicated Windows) ---
+dev:
+    docker compose up -d
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", "Write-Host '=== Backend API Server (Port 8000) ===' -ForegroundColor Cyan; uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", "cd 'Frontend/student-portal'; Write-Host '=== Frontend Student Portal (Port 3000) ===' -ForegroundColor Green; npm.cmd run dev"
+
+start: dev
+run: dev
+app: dev
 
 # --- Benchmarks & Evaluation ---
 # Run 8 benchmark evaluation scenarios and output metrics table

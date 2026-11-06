@@ -28,6 +28,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: student_support_pgweb
+    environment:
+      DATABASE_URL: postgres://student_agent:student_agent_dev@postgres:5432/student_support_db?sslmode=disable
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   qdrant_data:
   postgres_data:

@@ -22,9 +22,11 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.student_records import Student
 from app.prompts.system_prompt import build_system_prompt
+from app.schemas.approval_schema import ApprovalStatus
 from app.schemas.chat_schema import ChatResponse, ConversationSummary, MessageItem
 from app.schemas.tool_schemas import TOOL_SCHEMAS
 from app.services.approval_service import ApprovalService
+from app.services.audit_service import log_audit_event
 from app.tools.auth_tool import update_student_password
 from app.tools.fee_tool import get_fee_status
 from app.tools.profile_tool import update_student_profile
@@ -47,8 +49,13 @@ class ChatService:
         self.memory_manager = MemoryManager(session)
         self.approval_service = ApprovalService()
 
-    def _build_contextual_tool_map(self, student_id: str) -> Dict[str, Callable]:
-        """Binds authenticated caller student_id to tools requiring ownership checks."""
+    def _build_contextual_tool_map(
+        self,
+        student_id: str,
+        prior_pending_approval: bool = False,
+        user_confirmed: bool = False,
+    ) -> Dict[str, Callable]:
+        """Binds authenticated caller student_id to tools requiring ownership checks and approval gates."""
 
         async def contextual_fee_status(**kwargs):
             if "student_id" not in kwargs or not kwargs["student_id"]:
@@ -88,6 +95,20 @@ class ChatService:
         async def contextual_update_profile(**kwargs):
             if "student_id" not in kwargs or not kwargs["student_id"]:
                 kwargs["student_id"] = student_id
+
+            # Code-level Human-in-the-Loop enforcement:
+            # Only allow confirmed=True if there was a prior pending approval AND the user confirmed affirmatively.
+            # Otherwise, force confirmed=False so that immediate mutation is strictly blocked.
+            requested_confirmed = kwargs.get("confirmed", False)
+            if requested_confirmed and not (prior_pending_approval and user_confirmed):
+                logger.warning(
+                    f"ChatService: Blocked unconfirmed execution for student '{student_id}'. "
+                    f"Prior pending: {prior_pending_approval}, User confirmed: {user_confirmed}."
+                )
+                kwargs["confirmed"] = False
+            elif prior_pending_approval and user_confirmed:
+                kwargs["confirmed"] = True
+
             return await update_student_profile(**kwargs)
 
         return {
@@ -241,6 +262,46 @@ class ChatService:
             for turn in history_turns
         ]
 
+        # Check if the previous turn was waiting for approval on a sensitive action
+        prior_pending_approval = False
+        user_confirmed = False
+        if history_turns:
+            last_assistant_turn = next(
+                (t for t in reversed(history_turns) if t.role == "assistant"), None
+            )
+            if last_assistant_turn:
+                meta = last_assistant_turn.meta_data or {}
+                content_lower = (last_assistant_turn.content or "").lower()
+                if (
+                    meta.get("pending_approval") is True
+                    or "pending_approval" in content_lower
+                    or "reply yes to confirm or no to cancel" in content_lower
+                    or ("sensitive operation" in content_lower and "confirm" in content_lower)
+                    or ("reply yes" in content_lower and "cancel" in content_lower)
+                ):
+                    prior_pending_approval = True
+                    eval_result = self.approval_service.evaluate_confirmation(user_message)
+                    if eval_result == ApprovalStatus.APPROVED:
+                        user_confirmed = True
+                    elif eval_result == ApprovalStatus.REJECTED:
+                        user_confirmed = False
+                        # Record REJECTED audit log and tracer guardrail
+                        await log_audit_event(
+                            student_id=student_id,
+                            action="profile_update",
+                            target_id=student_id,
+                            decision="REJECTED",
+                            result=f"Student explicitly rejected pending sensitive operation: '{user_message}'",
+                        )
+                        tracer.log_guardrail(
+                            turn=1,
+                            tool_name="update_student_profile",
+                            caller_student_id=student_id,
+                            target_student_id=student_id,
+                            decision="REJECTED",
+                            reason=f"Student rejected pending sensitive operation: '{user_message}'",
+                        )
+
         # 5. Fetch Student Profile for prompt identity injection
         res_stu = await self.session.execute(select(Student).where(Student.student_id == student_id))
         student_rec = res_stu.scalar_one_or_none()
@@ -274,8 +335,12 @@ class ChatService:
             batch=student_rec.batch if student_rec else None,
         )
 
-        # 8. Configure Contextual Domain Tool Map
-        contextual_tools = self._build_contextual_tool_map(student_id)
+        # 8. Configure Contextual Domain Tool Map with Approval State
+        contextual_tools = self._build_contextual_tool_map(
+            student_id=student_id,
+            prior_pending_approval=prior_pending_approval,
+            user_confirmed=user_confirmed,
+        )
 
         # 9. Run Multi-Turn Agent Loop with Conversation History
         assistant_reply = await run_agent(
@@ -288,12 +353,15 @@ class ChatService:
         )
         trace_id = tracer.trace_id
 
+        # Check if the turn finished awaiting human approval
+        is_pending = tracer.guardrail_summary.get("PENDING_APPROVAL", 0) > 0
+
         # 10. Persist Assistant Response
         assistant_turn = Message(
             conversation_id=conversation.id,
             role="assistant",
             content=assistant_reply,
-            meta_data={"trace_id": trace_id},
+            meta_data={"trace_id": trace_id, "pending_approval": is_pending},
         )
         self.session.add(assistant_turn)
         await self.session.commit()
@@ -324,7 +392,7 @@ class ChatService:
             role="assistant",
             trace_id=trace_id,
             facts_learned=facts_learned_keys,
-            pending_approval=False,
+            pending_approval=is_pending,
             trace=trace_data,
         )
 

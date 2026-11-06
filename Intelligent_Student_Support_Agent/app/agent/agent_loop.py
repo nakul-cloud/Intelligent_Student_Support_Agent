@@ -70,18 +70,29 @@ async def run_agent(
         messages.append({"role": "user", "content": user_query})
 
     turn = 0
+    executed_tools: set[str] = set()
 
     # 2. Multi-turn reasoning and tool invocation loop
     while turn < effective_max_turns:
         turn += 1
         logger.info(f"AgentLoop: Starting Turn {turn}/{effective_max_turns}...")
 
+        # Dynamically exclude tools that have already executed to prevent infinite retry loops & token explosions
+        active_tools = None
+        if tool_schemas:
+            active_tools = [
+                s for s in tool_schemas
+                if s.get("function", {}).get("name") not in executed_tools
+            ]
+            if not active_tools:
+                active_tools = None
+
         # Measure LLM inference latency
         t_model_start = time.perf_counter()
         try:
             response = await LLMFactory.create_completion_with_fallback(
                 messages=messages,
-                tools=tool_schemas if tool_schemas else None,
+                tools=active_tools,
                 temperature=settings.agent_temperature,
                 client=async_groq_client,
             )
@@ -143,6 +154,37 @@ async def run_agent(
                 fn_name = tool_call.function.name
                 raw_args = tool_call.function.arguments or "{}"
                 tool_call_id = tool_call.id
+
+                # Safeguard: Suppress duplicate executions of the same tool in a single session
+                if fn_name in executed_tools:
+                    logger.warning(
+                        f"AgentLoop: Suppressing redundant execution of tool '{fn_name}' (already run in this session)."
+                    )
+                    tool_result = (
+                        f"Notice: Tool '{fn_name}' has already been executed for this inquiry. "
+                        "No additional or different data is available. "
+                        "Please synthesize your final response for the student directly based on the information retrieved."
+                    )
+                    tracer.log_tool_call(
+                        turn=turn,
+                        tool_name=fn_name,
+                        args={},
+                        result=tool_result,
+                        latency_ms=0.0,
+                        status="success",
+                        guardrail_status="ALLOWED",
+                    )
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "name": fn_name,
+                            "content": tool_result,
+                        }
+                    )
+                    continue
+
+                executed_tools.add(fn_name)
 
                 # Safely parse JSON arguments produced by the LLM
                 try:

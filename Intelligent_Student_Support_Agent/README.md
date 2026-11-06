@@ -1,22 +1,8 @@
-# 🎓 Intelligent Student Support Agent
+# 🏛️ Backend Core & Application Architecture Guide
 
-> **Production-Grade Multi-Turn Conversational AI for University Academic & Administrative Support**  
-> *Built with FastAPI, Pure PostgreSQL (Docker), Redis Sliding Cache, Qdrant Vector Search, and Groq-powered Function Calling.*
-
----
-
-## 💡 What Does This Project Do? (In Simple Words)
-
-In traditional universities, students often face long administrative queues, delayed emails, or have to navigate dense 50-page handbook PDFs just to find basic information.
-
-This project is an **intelligent, 24/7 AI-powered student advisor and help desk** that solves this problem completely:
-
-1. **📖 Official Policy Q&A**: Answers questions on exam attendance (70% rule), grading, fee refunds, and academic guidelines directly citing the 44-page official Student Handbook with section and page numbers.
-2. **💳 Live Fee & Scholarship Lookups**: Connects to live PostgreSQL databases to retrieve exact tuition balances, due dates, and scholarship records.
-3. **🎫 Helpdesk Ticketing**: Allows students to submit and track administrative support tickets directly through conversational chat.
-4. **🧠 Two-Tier Memory**: Remembers student identity, past queries, and academic context across sessions (Redis L1 cache + PostgreSQL L2 permanent storage).
-5. **🛡️ Strict Privacy Guardrails**: Ensures no student can ever view another student's private financial or academic records.
-6. **⚡ Instant & Reliable**: Sub-second responses powered by Groq LLMs with dynamic failover (`qwen/qwen3.8-27b`) if primary endpoints are busy.
+> **Component**: Core Backend & Agent Service (`Intelligent_Student_Support_Agent`)  
+> **Frameworks**: FastAPI 0.115+ (Python 3.12) | PostgreSQL 16 | Redis 7 | Qdrant Vector DB | Groq Cloud  
+> **Master Overview**: For the monorepo overview, full-stack setup, and video demo, refer to the [Root Master README](../README.md).  
 
 ---
 
@@ -24,266 +10,222 @@ This project is an **intelligent, 24/7 AI-powered student advisor and help desk*
 
 | Section | Focus Area |
 |---|---|
-| 🏛️ **[System Architecture](#️-system-architecture)** | Multi-tier design, clean layering, and data flows |
-| 📡 **[Full API Documentation](./API_DOCUMENTATION.md)** | Complete RESTful contracts, schemas, headers, & curl commands |
+| 🏛️ **[Backend Layered Architecture](#️-backend-layered-architecture)** | Domain-Driven Design (DDD), Clean Layering & Data Flow |
 | 📁 **[Module Documentation Index](#-module-documentation-index)** | Clickable guides for all 15 backend subpackages |
-| 👥 **[Student Personas & Option 2](#-student-personas--option-2-enrollment)** | Pre-seeded PostgreSQL records (`STU001`–`STU020`) |
-| 🧠 **[Dual-Tier Memory Mechanics](#-dual-tier-memory-mechanics)** | Ephemeral Redis cache + Durable PostgreSQL memory |
-| 🛡️ **[Security & Guardrails](#️-enterprise-security--guardrail-architecture)** | JWT authentication, ownership controls & audit trails |
-| 🌐 **[API Contracts & Verification](#-api-endpoint-contracts--live-verification)** | Detailed REST specs & live integration test matrix |
-| 📊 **[Evaluation & Benchmarks](#-benchmark-evaluation-results)** | Ingestion fidelity & 8-scenario benchmark results |
-| 🚀 **[Developer Automation (`Justfile`)](#-developer-automation-justfile)** | Routine commands for backend, frontend, and Docker |
+| 🗄️ **[Relational Data Models](#️-relational-data-models--storage-schema)** | PostgreSQL tables, Alembic migrations, and schema design |
+| 🧠 **[Dual-Tier Memory Architecture](#-dual-tier-memory-architecture)** | Ephemeral Redis cache + Durable PostgreSQL memory |
+| 🛡️ **[Security, Authorization & Audit](#️-security-authorization--audit-controls)** | Code-level ownership, approval gates & immutable audit trails |
+| 👥 **[Student Test Personas](#-student-test-personas--option-2-enrollment)** | Pre-seeded PostgreSQL cohorts (`STU001`–`STU020`) |
+| 🌐 **[API Endpoint Reference](#-api-endpoint-reference)** | Summary of all 17 REST endpoints |
+| 🧪 **[Backend Testing & Verification](#-backend-testing--verification)** | Automated test execution with Pytest & Alembic |
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ Backend Layered Architecture
 
-The application is structured following **Domain-Driven Design (DDD)** and **SOLID Principles**:
+The backend application is organized strictly according to **Clean Architecture** and **SOLID Principles**, enforcing clear separation between transport gateways, business logic, agentic execution, and infrastructure:
 
 ```mermaid
 flowchart TD
-    subgraph Client["Client Tier"]
-        Frontend["Student Portal (React 19)"]
+    subgraph Inbound["Transport & Protocol Layer"]
+        HTTP["HTTP Client (React Portal / CLI)"]
+        Routes["app/routes/<br/>FastAPI Routers & OpenAPI Schemas"]
+        MW["app/middlewares/<br/>JWT Validation, CORS, Rate Limiters"]
     end
 
-    subgraph Backend["FastAPI Backend (:8000)"]
-        direction TB
-        Routes["Routes & Middlewares"]
-        Controllers["Controllers"]
-        Services["Domain Services"]
-        AgentCore["ReAct Agent & Tools"]
-
-        Routes --> Controllers
-        Controllers --> Services
-        Services --> AgentCore
+    subgraph AppLogic["Application & Domain Layer"]
+        Controllers["app/controllers/<br/>Request Unpacking & Standard Envelopes"]
+        Services["app/services/<br/>AuthService, ChatService, ApprovalService, AuditService"]
+        AgentCore["app/agent/<br/>Multi-Turn ReAct Reasoning Loop"]
     end
 
-    subgraph Storage["Docker Storage Tier"]
-        Postgres[("PostgreSQL 16<br/>Relational Data & Memory L2")]
-        Redis[("Redis 7<br/>Cache, Rate Limits & Memory L1")]
-        Qdrant[("Qdrant<br/>Handbook Vector Store")]
+    subgraph AgenticTools["Agent Capabilities & RAG"]
+        Tools["app/tools/<br/>Fee, Scholarship, Ticket, Profile & RAG Tools"]
+        RAG["app/ai/<br/>PyMuPDF Chunking, Embedder & Qdrant Retriever"]
+        Memory["app/memory/<br/>Two-Tier Facade (Redis L1 + PostgreSQL L2)"]
     end
 
-    Frontend -->|HTTP / REST| Routes
+    subgraph Persistence["Storage & Infrastructure Layer"]
+        Postgres[("PostgreSQL 16 (Pure ACID)<br/>Relational Records, L2 Memory, Audit Logs")]
+        Redis[("Redis 7<br/>L1 Memory Cache, Sliding Rate Limits")]
+        Qdrant[("Qdrant Vector DB<br/>Handbook Semantic Chunks")]
+        Groq["Groq Cloud API<br/>Primary (GPT-OSS / Llama 3.3) & Fallback (Qwen 2.5)"]
+    end
+
+    HTTP --> MW --> Routes --> Controllers --> Services
+    Services --> AgentCore
+    AgentCore --> Tools
+    AgentCore --> Memory
+    AgentCore --> Groq
+    Tools --> RAG
+    Tools --> Postgres
+    RAG --> Qdrant
+    Memory --> Redis
+    Memory --> Postgres
     Services --> Postgres
-    Services --> Redis
-    AgentCore --> Postgres
-    AgentCore --> Redis
-    AgentCore --> Qdrant
 ```
 
-> [!NOTE]
-> **Zero SQLite Fallback Policy**: The system connects exclusively to PostgreSQL (`postgresql+asyncpg://...`). If PostgreSQL is unreachable, the application fails fast with diagnostic startup messages, eliminating dual-database drift.
+### Architectural Guarantees:
+1. **Zero SQLite Fallback**: The backend connects exclusively to PostgreSQL (`postgresql+asyncpg://...`). If PostgreSQL is unreachable, the system fails fast at startup with diagnostic telemetry, preventing multi-database schema drift.
+2. **Single Responsibility (SRP)**: Controllers strictly unpack requests and format envelopes; business logic resides solely in `app/services/`; database access is isolated in domain models and tools.
+3. **Dependency Inversion (DIP)**: Database sessions (`AsyncSession`) and LLM providers are injected via FastAPI dependencies and abstract factory patterns.
 
 ---
-
-## 🛠️ Technology Stack & System Components
-
-| Layer / Domain | Technology / Tool | Version / Model | Architectural Responsibility |
-|---|---|---|---|
-| **Frontend Portal** | React + Vite | React 19, Vite 5 | SPA student interface, interactive chat, dashboard tabs |
-| **Frontend Styling** | Tailwind CSS + Lucide | Tailwind 3, Lucide React | Modern responsive design system, reactive card layouts |
-| **API Gateway** | FastAPI + Uvicorn | FastAPI 0.115+, Uvicorn 0.28+ | High-throughput async REST endpoints, Pydantic v2 validation |
-| **Security & Identity** | PyJWT / Passlib / SlowAPI | HS256, bcrypt | Stateless JWT bearer tokens, sliding-window rate limiter |
-| **Agent Core** | ReAct Reasoning Loop | Native Python 3.12 | Autonomous multi-turn tool calling, ownership gatekeeper |
-| **Primary LLM** | Groq Cloud API | `openai/gpt-oss-120b` / `llama-3.3-70b` | High-speed multi-turn instruction & reasoning (<1s TTFT) |
-| **Fallback LLM** | Groq Cloud API | `qwen/qwen3.8-27b` | Dynamic failover provider on primary timeout or quota limits |
-| **Vector Store** | Qdrant Vector DB | Qdrant 1.8+ (Docker) | Cosine similarity vector search over 44-page handbook |
-| **Local Embedder** | SentenceTransformers | `Orange/orange-nomic-v1.5-1536` | 1536-dim embeddings with singleton cache (<0.01ms LRU) |
-| **Re-Ranker** | Cross-Encoder | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Two-stage deep semantic re-ranking on CPU with LRU cache |
-| **Relational Database** | PostgreSQL | PostgreSQL 16 (Docker) | Pure ACID store for students, fees, tickets, audit logs, memory L2 |
-| **Cache & State Store** | Redis | Redis 7 (Docker) | 24h sliding conversation memory (L1), rate limiters, RAG cache |
-| **Document Ingestion** | PyMuPDF (fitz) | PyMuPDF 1.23+ | Semantic chunking, heading detection, and page provenance |
-| **DevOps & Tasks** | Justfile / Docker | Docker Compose 3.8+ | One-command orchestration (`just up`, `just server`, `just frontend`) |
-
----
-
 
 ## 📁 Module Documentation Index
 
-Every backend subpackage contains a dedicated **`README.md`** detailing its responsibilities, architectural diagrams, component tables, and SOLID principles:
+Every backend subpackage contains its own self-contained **`README.md`** detailing component tables, class diagrams, and design rationales:
 
 | Subpackage | Documentation Guide | Primary Architectural Responsibility |
 |---|---|---|
-| **Controllers** | [📖 `app/controllers/README.md`](./app/controllers/README.md) | Request dispatching, caller unpacking, and standard JSON envelopes (`success_response`). |
-| **Routes** | [📖 `app/routes/README.md`](./app/routes/README.md) | RESTful API paths, Pydantic body validation, and FastAPI dependency wiring. |
-| **Services** | [📖 `app/services/README.md`](./app/services/README.md) | Core business logic, identity lifecycles, and agent turn orchestration. |
-| **Exceptions** | [📖 `app/exceptions/README.md`](./app/exceptions/README.md) | Domain exception hierarchy (`AppError`) and global HTTP error translation. |
+| **Controllers** | [📖 `app/controllers/README.md`](./app/controllers/README.md) | Request dispatching, caller identity extraction, and standardized JSON envelopes (`success_response`). |
+| **Routes** | [📖 `app/routes/README.md`](./app/routes/README.md) | Declarative REST endpoints, Pydantic body validation, and dependency injection wiring. |
+| **Services** | [📖 `app/services/README.md`](./app/services/README.md) | Core business logic, student identity lifecycle, and multi-turn agent turn orchestration. |
+| **Exceptions** | [📖 `app/exceptions/README.md`](./app/exceptions/README.md) | Centralized domain exception hierarchy (`AppError`) and global HTTP error translation. |
 | **Middlewares** | [📖 `app/middlewares/README.md`](./app/middlewares/README.md) | Bearer JWT token decoding, identity validation, and `get_current_student` guard. |
 | **Models** | [📖 `app/models/README.md`](./app/models/README.md) | SQLAlchemy 2.0 async relational schemas, foreign keys, and PostgreSQL `JSONB` fields. |
 | **Schemas** | [📖 `app/schemas/README.md`](./app/schemas/README.md) | Pydantic v2 DTOs for inbound requests, outbound payloads, and OpenAI tool schemas. |
-| **Tools** | [📖 `app/tools/README.md`](./app/tools/README.md) | Real database and RAG tools invoked dynamically by the agent during multi-turn chat. |
-| **Memory** | [📖 `app/memory/README.md`](./app/memory/README.md) | Two-tier state: Redis 24h sliding window + PostgreSQL durable facts with privacy scrubbing. |
-| **Agent** | [📖 `app/agent/README.md`](./app/agent/README.md) | Multi-turn agent loop, Groq LLM client provider, and token/latency tracing. |
+| **Tools** | [📖 `app/tools/README.md`](./app/tools/README.md) | Domain tools dynamically invoked by the agent with ownership checks (`fee`, `scholarship`, `ticket`, `profile`, `rag`). |
+| **Memory** | [📖 `app/memory/README.md`](./app/memory/README.md) | Two-tier state facade: Redis sliding cache + PostgreSQL durable facts with privacy scrubbing. |
+| **Agent** | [📖 `app/agent/README.md`](./app/agent/README.md) | Multi-turn ReAct reasoning loop, Groq LLM client provider, and token/latency tracing. |
 | **Providers** | [📖 `app/providers/README.md`](./app/providers/README.md) | Multi-provider LLM factory, dynamic fallback (`qwen/qwen3.8-27b`), and wire clients. |
 | **AI & RAG** | [📖 `app/ai/README.md`](./app/ai/README.md) | PDF extraction, dynamic semantic chunking, local embeddings, and Qdrant vector search. |
 | **Prompts** | [📖 `app/prompts/README.md`](./app/prompts/README.md) | Dynamic system prompt builder, persona directives, citation rules, and memory injection. |
-| **Config** | [📖 `app/config/README.md`](./app/config/README.md) | Environment configuration (`BaseSettings`), PostgreSQL engine, and Redis client. |
+| **Config** | [📖 `app/config/README.md`](./app/config/README.md) | Environment configuration (`BaseSettings`), PostgreSQL connection pool, and Redis client. |
 | **Utils** | [📖 `app/utils/README.md`](./app/utils/README.md) | Ownership security guardrails, bcrypt password hashing, and Loguru logging. |
 
 ---
 
-## 👥 Student Personas & Option 2 Enrollment
+## 🗄️ Relational Data Models & Storage Schema
 
-The database is pre-seeded with **20 comprehensive student records** (`STU001` through `STU020`) via `just seed`:
+The PostgreSQL database maintains 8 core domain tables orchestrated via SQLAlchemy 2.0 Async and tracked through Alembic migrations (`alembic/`):
 
-* **Pre-Activated Demo Accounts (`STU001`–`STU005`)**: Initialized with default password `Student@123` for instant portal login and testing.
-* **Available Registration Cohort (`STU006`–`STU020`)**: Enrolled in university records but awaiting account creation. Users register them via `/signup`.
-
-| Student ID | Name | Programme | Fee Status | Scholarship | Account State | Recommended Test Query / Scenario |
-|:---:|---|---|---|---|:---:|---|
-| **`STU001`** | **Rahul Sharma** | PGDM AI & DS | Partially Paid (₹225k due Oct 31) | 20% Merit (Active) | Pre-Activated | *"What is my remaining fee balance and my scholarship details?"* |
-| **`STU002`** | **Priya Patel** | MBA Marketing | Paid in Full (₹0 due, RCP-0810) | None | Pre-Activated | *"Check if I have any pending fee dues."* |
-| **`STU003`** | **Amit Verma** | B.Tech CSE | **Overdue** (₹200k since Sept 1) | 15% Sports (Active) | Pre-Activated | *"What happens if my fees are overdue and how much do I owe?"* |
-| **`STU004`** | **Sneha Gupta** | M.Tech Data Science | Unpaid (₹380k due Nov 15) | 25% Research (Active) | Pre-Activated | *"Can I raise a ticket regarding fee installment extensions?"* |
-| **`STU005`** | **Vikram Singh** | BBA | Paid in Full (₹0 due, RCP-0720) | None | Pre-Activated | *"What are the library timings and borrowing rules?"* |
-| **`STU006`** | **Ananya Iyer** | B.Tech AI & ML | Partially Paid (₹210k due Nov 30) | 30% Women in Tech | Available | Register via `/signup` with password `Password@123`. |
-| **`STU007`–`STU020`**| *Enrolled Cohort* | Diverse UG / PG | Mixed (Paid, Overdue, Pending) | Merit & Need-based | Available | Self-registration testing across degree programmes. |
-
-> [!IMPORTANT]
-> **Option 2 Enrollment Gatekeeper**: Attempting to register an unknown ID (e.g., `STU999`) returns `HTTP 404 Not Found`:  
-> *"Student ID 'STU999' is not enrolled in the university records. Registration requires an enrolled Student ID (STU001 through STU020)."*
+| Table Name | Model Class | Primary Key | Description & Key Invariants |
+|---|---|:---:|---|
+| **`students`** | `Student` | `id` (UUID) | Official institutional roster (`student_id`, `name`, `programme`, `batch`, `phone`, `email`, `address`, `status`). |
+| **`auth_credentials`** | `AuthCredentials` | `id` (UUID) | Password hashes (`bcrypt`), active status, and unique 1:1 foreign key to `students.student_id`. |
+| **`fee_records`** | `FeeRecord` | `id` (UUID) | Tuition ledger records (`total_fee`, `paid`, `pending`, `due_date`, `status`, `receipt`). |
+| **`scholarships`** | `Scholarship` | `id` (UUID) | Active aid grants, concession percentages, and semester grant allocations. |
+| **`support_tickets`** | `SupportTicket` | `id` (UUID) | Administrative escalation tickets (`ticket_id`, `category`, `priority`, `status`, `description`). |
+| **`student_memory`** | `StudentMemory` | `id` (UUID) | Permanent L2 facts (`student_id`, `fact_key`, `fact_value`, `confidence`). |
+| **`audit_logs`** | `AuditLog` | `id` (UUID) | Immutable compliance log (`student_id`, `action`, `target_id`, `decision`, `result`). |
+| **`conversations`** | `Conversation` | `id` (UUID) | Chat sessions with cascading foreign key to `messages`. |
+| **`messages`** | `Message` | `id` (UUID) | Turn-by-turn chat messages (`role`, `content`, `meta_data` JSONB). |
 
 ---
 
-## 🧠 Dual-Tier Memory Mechanics
+## 🧠 Dual-Tier Memory Architecture
 
-The agent implements a privacy-first, dual-tier memory system:
+The memory subsystem is managed by `MemoryManager` (`app/memory/memory_manager.py`) and operates across two tiers:
 
 ```mermaid
 flowchart TD
-    Prompt["User Turn"] --> Tier1["Tier 1: Redis Cache (L1)<br/>Active Dialogue (24h TTL)"]
-    Tier1 --> Gate{"Privacy Gate"}
-    Gate -- "Sensitive" --> Discard["Discard / Redact"]
-    Gate -- "Allowed Facts" --> Tier2[("Tier 2: PostgreSQL (L2)<br/>Durable Student Memory")]
+    Turn["User Query + Assistant Turn"] --> Classifier{"classify_sensitivity()"}
+    
+    Classifier -- "Contains OTP, Password, PIN" --> Redact["Discard / Scrub<br/>(0 facts stored)"]
+    
+    Classifier -- "Safe Academic Context" --> Extractor["Deterministic Slot Extractor<br/>(Hybrid Regex: Programme, Batch, Goals)"]
+    
+    Extractor --> L1["Tier 1: Redis Cache (L1)<br/>Fast In-Session Recall (24h TTL)"]
+    Extractor --> L2[("Tier 2: PostgreSQL (L2)<br/>Durable Student Memory")]
+```
+
+* **Tier 1 (Redis Cache)**: Keyed as `student_memory:{student_id}` with a 24-hour sliding TTL for instant retrieval during active sessions.
+* **Tier 2 (PostgreSQL)**: Durable table `student_memory` ensuring facts persist permanently across browser restarts and device changes.
+* **Zero Token Extraction**: Uses deterministic Python regex slot patterns (`programme`, `batch`, `preferred_name`, `academic_goal`), consuming **0 LLM tokens** for memory persistence.
+
+---
+
+## 🛡️ Security, Authorization & Audit Controls
+
+### 1. Deterministic Identity Binding (JWT)
+Requests to `/api/v1/chat`, `/api/v1/student/*`, and `/api/v1/audit/*` require an `Authorization: Bearer <token>` header. The token subject (`sub`) is extracted via FastAPI's `get_current_student` dependency and passed directly into the service layer.
+
+### 2. Code-Level Ownership Gate ([`ownership.py`](./app/utils/ownership.py))
+Authorization is never delegated to the LLM. In `get_fee_status`, `check_scholarship`, and `get_ticket_status`:
+```python
+check_ownership(requesting_student_id=caller_id, target_student_id=target_id)
+```
+If `caller_id != target_id`, the function raises `PermissionDeniedError`, records a `BLOCKED` decision in `audit_logs`, and immediately returns an access denied response.
+
+### 3. Human-in-the-Loop Approval Gate ([`approval_service.py`](./app/services/approval_service.py))
+Actions modifying student directory records or requesting fee waivers pause execution:
+- **Turn 1**: The agent generates an `ApprovalRequest(status="PENDING")` and prompts the student for confirmation.
+- **Turn 2**: A student affirmative reply (`YES`, `CONFIRM`) transitions status to `APPROVED`, executing the mutation. Any refusal transitions to `REJECTED`, leaving the database completely untouched.
+
+### 4. Immutable Audit Trail ([`audit_service.py`](./app/services/audit_service.py))
+Every security-sensitive decision is written synchronously to PostgreSQL:
+```sql
+INSERT INTO audit_logs (student_id, action, target_id, decision, result, created_at) ...
 ```
 
 ---
 
-## 🛡️ Enterprise Security & Guardrail Architecture
+## 👥 Student Test Personas & Option 2 Enrollment
 
-1. **Authentication**: Passwords hashed using bcrypt. Stateless JWT verification via FastAPI `get_current_student` dependency.
-2. **Code-Level Ownership Enforcement**: Enforced directly inside tool functions (`app/utils/ownership.py`). Authenticated caller `STU001` cannot read or query records belonging to `STU002`.
-3. **Approval Gate for Sensitive Actions**: Human-in-the-loop confirmation required before modifying student records or submitting grievance/appeal tickets.
-4. **Immutable Audit Trails**: Every tool execution and access decision (`ALLOWED`, `BLOCKED`, `APPROVED`, `REJECTED`) is recorded synchronously in PostgreSQL table `audit_logs`.
+The database is seeded with **20 comprehensive student accounts** via `just seed`:
 
----
+* **Pre-Activated Accounts (`STU001`–`STU005`)**: Initialized with default password `Student@123` for immediate login and verification.
+* **Self-Enrollment Cohort (`STU006`–`STU020`)**: Admitted in university records but unactivated. Used to verify the Option 2 self-enrollment workflow via `POST /api/v1/auth/signup`.
+* **Negative Test Persona (`STU999`)**: Not present in university records. Registration returns `404 Not Found`.
 
-## 🌐 API Endpoint Contracts & Live Verification
-
-### 1. Route Contracts Summary (All 17 Endpoints)
-
-*For exhaustive payload schemas, cURL commands, OWASP headers, and error code envelopes, see **[📖 Full API Documentation (`API_DOCUMENTATION.md`)](./API_DOCUMENTATION.md)** and **[🛣️ Routes Module Specification (`app/routes/README.md`)](./app/routes/README.md)**.*
-
-* **Authentication & Identity** (`/api/v1/auth`):
-  * `POST /signup` — Enrolls existing student from university roster (`Option 2`).
-  * `POST /login` — Authenticates credentials and issues signed Bearer JWT (`20 req/min rate limit`).
-  * `POST /change-password` — Immediately updates password for authenticated student (`Bearer JWT`).
-  * `GET /me` — Verifies token validity and returns authenticated student profile (`Bearer JWT`).
-* **Multi-Turn AI Agent Chat** (`/api/v1/chat`, Protected via Bearer JWT):
-  * `POST /` — Multi-turn ReAct agent reasoning turn with dynamic Groq fallback (`qwen/qwen3.8-27b`) and sub-second RAG retrieval (`30 req/min rate limit`).
-  * `GET /conversations` — Lists past and active chat sessions owned by the authenticated student.
-  * `GET /conversations/{id}/messages` — Chronological message turns, roles, and execution metadata for a session.
-  * `DELETE /conversations/{id}` — Permanently deletes a chat session and cascading message turns.
-* **Student Academic Records** (`/api/v1/student`, Protected via Bearer JWT, Tenant-Isolated):
-  * `GET /profile` — Authenticated profile (programme, batch, status, contact info).
-  * `PUT /profile` — Updates phone, email, and campus address directly in PostgreSQL.
-  * `GET /fees` — Tuition fee ledger breakdown (total, paid, pending, due date, receipt).
-  * `GET /scholarship` — Active scholarship award, percentage, and semester grant amount.
-  * `GET /tickets` — Support and grievance tickets filed by the authenticated student.
-* **Security Audit & Compliance** (`/api/v1/audit`):
-  * `GET /logs` — Immutable security audit trail stream with filtering by decision (`ALLOWED`, `BLOCKED`, `APPROVED`, `REJECTED`).
-  * `GET /summary` — Aggregated compliance metrics for Assignment 2 verification.
-* **Policy Document Ingestion** (`/api/v1/ingest`):
-  * `POST /` — Multipart PDF handbook upload, semantic chunking, and Qdrant vectorization.
-* **Health & Diagnostics**:
-  * `GET /health` — Deep non-blocking async probe across PostgreSQL (`SELECT 1`), Redis (`ping`), and Qdrant (`get_collections`).
+| Student ID | Student Name | Programme | Fee Status | Scholarship Status | Account State | Testing Scenario |
+|:---:|---|---|---|---|:---:|---|
+| **`STU001`** | **Rahul Sharma** | PGDM AI & DS | Partially Paid (₹225k due) | 20% Merit Award | Pre-Activated (`Student@123`) | Fee check, scholarship inquiry, cross-student rejection. |
+| **`STU002`** | **Priya Patel** | MBA Marketing | Paid in Full (₹0 due) | None | Pre-Activated (`Student@123`) | Zero-balance verification, cross-tenant isolation target. |
+| **`STU003`** | **Amit Verma** | B.Tech CSE | Overdue (₹200k balance) | 15% Sports Grant | Pre-Activated (`Student@123`) | Overdue fee notification and disciplinary policy search. |
+| **`STU004`** | **Sneha Gupta** | M.Tech Data Science | Unpaid (₹380k due) | 25% Research Fellowship | Pre-Activated (`Student@123`) | Ticket creation and multi-turn memory recall across turns. |
+| **`STU005`** | **Vikram Malhotra** | BBA Analytics | Partially Paid (₹150k due) | None | Pre-Activated (`Student@123`) | Administrative inquiries and profile contact updates. |
+| **`STU006`** | **Ananya Iyer** | B.Tech AI & ML | Partially Paid (₹210k due) | 30% Women in Tech | Available for `/signup` | Option 2 self-registration verification. |
+| **`STU007`–`STU020`** | *Enrolled Roster* | Diverse UG / PG | Mixed Dues | Mixed Aid Grants | Available for `/signup` | Extended cohort registration testing. |
 
 ---
 
-### 📊 Live API Verification Matrix (PostgreSQL Backend)
+## 🌐 API Endpoint Reference
 
-The table below summarizes live integration test results executed against the running backend with Docker PostgreSQL:
+The backend provides 17 RESTful endpoints. Detailed request/response schemas, OWASP headers, and cURL commands are documented in **[📖 API Documentation (`API_DOCUMENTATION.md`)](./API_DOCUMENTATION.md)**:
 
-| Endpoint & Method | Test Scenario | HTTP Status | Response Summary | Architectural Invariant Verified |
-|:---|:---|:---:|:---|:---|
-| `POST /api/v1/auth/signup` | Unregistered ID `STU999` | **404 Not Found** | `"Student ID 'STU999' is not enrolled in the university records. Registration requires an enrolled Student ID (STU001 through STU020)."` | **Option 2 Gatekeeper**: Unadmitted users are blocked from creating accounts. |
-| `POST /api/v1/auth/signup` | Enrolled ID `STU006` | **201 Created** | `"Student account registered successfully."` | **Credential Creation**: Hashes password with bcrypt and records in PostgreSQL `auth_credentials`. |
-| `POST /api/v1/auth/signup` | Duplicate `STU006` | **409 Conflict** | `"An account for student ID 'STU006' already exists. Please log in."` | **Collision Guard**: Idempotently prevents account overwrites. |
-| `POST /api/v1/auth/login` | Login with `STU006` | **200 OK** | Returned valid signed Bearer JWT token | **JWT Lifecycle**: Issues signed token with claim `sub: STU006`. |
-| `GET /api/v1/student/profile` | Bearer Token for `STU006` | **200 OK** | Loaded: Ananya Iyer, B.Tech AI & ML, Batch 2024-28 | **Referential Integrity**: Links JWT subject to PostgreSQL `students` table. |
-| `GET /api/v1/student/fees` | Bearer Token for `STU006` | **200 OK** | Loaded: Total ₹4,20,000, Partially Paid, RCP-2026-0412 | **Ledger Isolation**: Resolves pre-seeded fee ledger for student. |
-| `GET /api/v1/student/scholarship` | Bearer Token for `STU006` | **200 OK** | Loaded: Women in Tech Award (30% / ₹63,000) | **Aid Grant Resolution**: Fetches active award from PostgreSQL `scholarships`. |
-| `GET /api/v1/student/tickets` | Bearer Token for `STU006` | **200 OK** | Retrieved 0 support tickets (clean initial state) | **Tenant Boundary**: Returns only tickets belonging to authenticated student. |
-
-> Detailed audit logs and metrics are documented in [evaluation/results/auth_audit_report.md](file:///d:/Agentic_AI_End_Term_Project/Intelligent_Student_Support_Agent/evaluation/results/auth_audit_report.md).
-
----
-
-## 📊 Benchmark Evaluation Results
-
-The test suite evaluates 8 benchmark scenarios covering tool selection, policy RAG, persistent memory recall, privacy scrubbing, ownership blocking, and domain guardrails (`just eval`):
-
-| ID | Scenario Description | Student | Expected Tool | Precision | Status |
-|:---:|:---|:---:|:---|:---:|:---:|
-| 1 | Fee status check | `STU001` | `get_fee_status` | ✅ YES | **PASS** |
-| 2 | Payment policy from handbook | `STU001` | `search_student_handbook` | ✅ YES | **PASS** |
-| 3 | Scholarship inquiry | `STU001` | `check_scholarship` | ✅ YES | **PASS** |
-| 4 | Support ticket creation | `STU001` | `create_support_ticket` | ✅ YES | **PASS** |
-| 5 | Cross-student access rejection (Security) | `STU001` | `get_fee_status` | ✅ YES | **PASS** |
-| 6 | Persistent memory recall across turns | `STU004` | `None (Direct LLM)` | ✅ YES | **PASS** |
-| 7 | Sensitive credentials scrubbing (Privacy) | `STU001` | `None (Direct LLM)` | ✅ YES | **PASS** |
-| 8 | Out of scope domain refusal | `STU001` | `None (Direct LLM)` | ✅ YES | **PASS** |
-
-**Benchmark Summary**: **8 / 8 Scenarios Passed (100.0%)**
+* **Authentication & Credentials** (`/api/v1/auth`):
+  * `POST /signup` — Register credentials for an enrolled student (Option 2).
+  * `POST /login` — Authenticate and receive a Bearer JWT.
+  * `POST /change-password` — Update password for the authenticated caller.
+  * `GET /me` — Retrieve the current authenticated student profile.
+* **Conversational Agent** (`/api/v1/chat`):
+  * `POST /` — Multi-turn reasoning turn with tools, RAG, and memory.
+  * `GET /conversations` — List conversation sessions owned by the caller.
+  * `GET /conversations/{id}/messages` — Message history and trace metadata.
+  * `DELETE /conversations/{id}` — Delete a conversation and associated turns.
+* **Student Records** (`/api/v1/student`):
+  * `GET /profile` / `PUT /profile` — Read or update contact details.
+  * `GET /fees` — Read tuition ledger and payment receipts.
+  * `GET /scholarship` — Read active aid grant details.
+  * `GET /tickets` — List support tickets filed by the student.
+* **Audit & Compliance** (`/api/v1/audit`):
+  * `GET /logs` — Filterable audit trail stream.
+  * `GET /summary` — Aggregate safety and authorization metrics.
+* **Handbook Ingestion & System Health**:
+  * `POST /api/v1/ingest` — Parse and vectorize handbook PDF.
+  * `GET /health` — Non-blocking health probe (PostgreSQL, Redis, Qdrant).
 
 ---
 
-## ⚙️ Environment Variables Reference
+## 🧪 Backend Testing & Verification
 
-| Variable Name | Default Value | Description |
-|---|---|---|
-| `APP_ENV` | `development` | Runtime environment (`development`, `production`, `testing`) |
-| `DATABASE_URL` | `postgresql+asyncpg://...` | Asynchronous PostgreSQL 16 connection string |
-| `REDIS_URL` | `redis://localhost:6379/0` | Asynchronous Redis 7 connection string |
-| `QDRANT_URL` | `http://localhost:6333` | Host URL for Qdrant vector database container |
-| `EMBEDDING_MODEL` | `Orange/orange-nomic-v1.5-1536` | Local HuggingFace sentence transformer model |
-| `EMBEDDING_DIMENSIONS` | `1536` | Embedding vector size matching Qdrant collection |
-| `CHUNK_TARGET_CHARS` | `1800` | Dynamic target chunk size in characters (~450 tokens) |
-| `CHUNK_OVERLAP_CHARS` | `200` | Boundary overlap between adjacent semantic chunks |
-| `GROQ_API_KEY` | *(Secret)* | Groq API Key for model inference |
-| `GROQ_MODEL` | `openai/gpt-oss-120b` | Primary LLM model for the agent loop |
-
----
-
-## 🚀 Developer Automation (`Justfile`)
-
-All routine operations can be executed from the **workspace root** without manual `cd` commands:
+The backend includes comprehensive automated test suites covering unit logic, database integrity, and security invariants:
 
 ```bash
-# Infrastructure Management
-just up               # Start PostgreSQL, Redis, and Qdrant in Docker
-just down             # Stop and remove Docker containers
-just logs             # Stream container logs
+# Run Task 9 test suite (Authentication, Memory, Security, and Audit)
+uv run pytest tests/test_task9.py
 
-# Database & Ingestion Setup
-just db-init          # Run schema migrations in PostgreSQL
-just seed             # Seed 20 student profiles into PostgreSQL
-just ingest           # Parse, chunk, embed, and index student handbook
+# Run tool-specific test suite
+uv run pytest tests/test_password_and_ticket_tools.py
 
-# Application Runtimes
-just backend          # Start FastAPI backend server (http://localhost:8000)
-just frontend         # Start React student portal (http://localhost:3000)
-just streamlit        # Launch Streamlit development & testing UI
-just cli              # Launch interactive terminal agent CLI
-
-# Frontend Tooling
-just frontend-install # Install frontend npm dependencies
-just frontend-build   # Build production frontend bundle
-just frontend-preview # Preview production build locally
-
-# Benchmarks & Verification
-just eval             # Execute 8 benchmark evaluation scenarios
-just audit-chunks     # Audit 5-dimension chunking fidelity
-just clean            # Remove temporary log files and caches
+# Run database migration check
+uv run alembic check
 ```
+
+For evaluation benchmark reports and comparison tables, see:
+* [📄 Final Evaluation Report (Assignment 1 vs. 2)](./evaluation/results/final_evaluation_report.md)
+* [📄 Privacy & Approval Rules Architecture](./evaluation/results/privacy_approval_explanation.md)
+* [📄 Chunking Fidelity Audit](./evaluation/results/chunking_audit_report.md)
+* [📄 Identity Auth & Access Control Audit](./evaluation/results/auth_audit_report.md)

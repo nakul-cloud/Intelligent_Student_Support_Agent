@@ -10,9 +10,12 @@ UPDATE_STUDENT_PROFILE_SCHEMA: dict[str, Any] = {
     "function": {
         "name": "update_student_profile",
         "description": (
-            "Immediately updates the student's personal contact details (phone number, email address, "
-            "or residential address) in the university database. Takes effect instantly without "
-            "submitting a support ticket or waiting for administrative review."
+            "Updates the student's personal contact details (phone number, email address, "
+            "or residential address) in the university database. Because modifying official student records "
+            "is a sensitive operation, it enforces a Human-in-the-Loop approval gate. "
+            "When first requested (or when confirmed is false), this tool initiates an approval request "
+            "and requires explicit student confirmation (YES/NO). Only when the student has affirmatively "
+            "confirmed should confirmed be set to true to commit changes to the database."
         ),
         "parameters": {
             "type": "object",
@@ -32,6 +35,13 @@ UPDATE_STUDENT_PROFILE_SCHEMA: dict[str, Any] = {
                 "student_id": {
                     "type": "string",
                     "description": "The unique student ID whose profile is being updated (e.g., 'STU001').",
+                },
+                "confirmed": {
+                    "type": "boolean",
+                    "description": (
+                        "Set to true ONLY if the student has explicitly and affirmatively replied YES, CONFIRM, "
+                        "or APPROVED to proceed with this pending sensitive update. Defaults to false."
+                    ),
                 },
             },
         },

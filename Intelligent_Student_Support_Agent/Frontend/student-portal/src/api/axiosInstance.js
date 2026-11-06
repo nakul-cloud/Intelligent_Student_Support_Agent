@@ -14,7 +14,7 @@ const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 45000, // Agent turns can take multiple seconds for tool execution
+  timeout: 120000, // Generous buffer allowing agent multi-turn RAG reasoning and fallback if needed
 });
 
 // Request interceptor: Auto-inject JWT Bearer token

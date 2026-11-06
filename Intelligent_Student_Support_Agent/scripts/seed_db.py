@@ -630,9 +630,9 @@ async def seed_database() -> None:
                         await session.delete(schol_record)
                         logger.info(f"  [-] Removed scholarship for {student_id}")
 
-                # 4. Default Auth Credentials for active starter accounts (STU001 - STU005)
-                # STU006 through STU020 are available to be claimed / registered by user on /signup
-                if item.get("has_default_auth", False):
+                # 4. Default Auth Credentials for all accounts (STU001 - STU020)
+                # All students are pre-seeded with default password 'Student@123'
+                if item.get("has_default_auth", True):
                     auth_res = await session.execute(
                         select(AuthCredentials).where(AuthCredentials.student_id == student_id)
                     )
